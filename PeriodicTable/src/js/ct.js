@@ -1,7 +1,9 @@
 /*! Made with ct.js http://ctjs.rocks/ */
 
-import { addText, getTemplates, doTalk } from "./ct-utils";
+import { addText, getTemplates, doTalk, deepCopy } from "./ct-utils";
+import Room_Platformer from "./Room_Platformer";
 import { info4symbol } from "./ptable";
+import {counters} from "./game-state";
 
 const deadPool = []; // a pool of `kill`-ed copies for delaying frequent garbage collection
 const copyTypeSymbol = Symbol('I am a ct.js copy');
@@ -968,7 +970,7 @@ Room.roomId = 0;
          * of the frame, so the name of a new room may be overridden.
          */
         'switch'(roomName) {
-            if (ct.rooms.templates[roomName]) {
+            if (getRoomTemplate(roomName)) {
                 nextRoom = roomName;
                 ct.rooms.switching = true;
             } else {
@@ -993,11 +995,11 @@ Room.roomId = 0;
          * @returns {Room} A newly created room
          */
         append(roomName, exts) {
-            if (!(roomName in ct.rooms.templates)) {
+            if (! getRoomTemplate(roomName)) {
                 console.error(`[ct.rooms] append failed: the room ${roomName} does not exist!`);
                 return false;
             }
-            const room = new Room(ct.rooms.templates[roomName]);
+            const room = new Room(getRoomTemplate(roomName));
             if (exts) {
                 ct.u.ext(room, exts);
             }
@@ -1017,11 +1019,11 @@ Room.roomId = 0;
          * @returns {Room} A newly created room
          */
         prepend(roomName, exts) {
-            if (!(roomName in ct.rooms.templates)) {
+            if (!getRoomTemplate(roomName)) {
                 console.error(`[ct.rooms] prepend failed: the room ${roomName} does not exist!`);
                 return false;
             }
-            const room = new Room(ct.rooms.templates[roomName]);
+            const room = new Room(getRoomTemplate(roomName));
             if (exts) {
                 ct.u.ext(room, exts);
             }
@@ -1040,7 +1042,7 @@ Room.roomId = 0;
          * so beware of memory leaks if you keep a reference to this array for a long time!
          */
         merge(roomName) {
-            if (!(roomName in ct.rooms.templates)) {
+            if (!getRoomTemplate(roomName)) {
                 console.error(`[ct.rooms] merge failed: the room ${roomName} does not exist!`);
                 return false;
             }
@@ -1049,7 +1051,7 @@ Room.roomId = 0;
                 tileLayers: [],
                 backgrounds: []
             };
-            const template = ct.rooms.templates[roomName];
+            const template = getRoomTemplate(roomName);
             const target = ct.room;
             for (const t of template.bgs) {
                 const bg = new ct.templates.Background(t.texture, null, t.depth, t.extends);
@@ -1086,7 +1088,7 @@ Room.roomId = 0;
             }
             ct.rooms.clear();
             deadPool.length = 0;
-            var template = ct.rooms.templates[roomName];
+            var template = getRoomTemplate(roomName);
             ct.roomWidth = template.width;
             ct.roomHeight = template.height;
             ct.camera = new Camera(
@@ -1150,7 +1152,7 @@ if (!this.kill) {
          * The name of the starting room, as it was set in ct.IDE.
          * @type {string}
          */
-        starting: 'Room_Platformer'
+        starting: 'Room_Platformer_He'
     };
 })();
 /**
@@ -1353,44 +1355,7 @@ ct.rooms.templates['Room_Platformer'] = {
     onCreate() {
         /* room Room_Platformer — core_OnRoomStart (On room start event) */
 {
-
-// fade the BG
-if (ct.backgrounds.list['backdrop']) {
-    const bg = ct.backgrounds.list['backdrop'][0];
-    bg.alpha = 0.35;
-}
-
-ct.rooms.append('Room_UI');
-
-// Make a room
-this.atomicNumber = 1;
-this.element = Object.values(info4symbol)[this.atomicNumber - 1]; // NB: 0-index
-
-/** use a fn to avoid memory leaks */
-function arrangeRoom(room) {
-    let n = room.atomicNumber % 4;
-    let corners = [ ["",""],
-                    ["",""]];
-    let doors = getTemplates(room, "door");
-    let tanks = ct.templates.list['tank-2'].filter(tmp => tmp.getRoom() === room);
-    let cats = ct.templates.list['cat-1'].filter(tmp => tmp.getRoom() === room);
-    console.log("doors",doors);
-    corners[n%2][n>2?1:0] = "tank";
-    corners[(n+1)%2][n>2?0:1] = "door";
-    console.log("apply corners",corners);
-    for(let i=1; i<doors.length; i++) {
-        doors[i].kill = true;        
-    }
-    // where next?
-    doors[0].nextRoom = "Room_Bridge"; // TODO
-
-    for(let i=0; i<tanks.length-1; i++) tanks[i].kill = true;    
-    for(let i=1; i<cats.length; i++) {
-        cats[i].kill = true;
-    }
-};
-arrangeRoom(this);
-
+	Room_Platformer.onCreate();
 }
 
     },
@@ -4370,8 +4335,8 @@ const Camera = (function Camera() {
             if (!room.isUi) {
                 throw new Error('[ct.camera] An attempt to realing a room that is not in UI space. The room in question is', room);
             }
-            const w = (ct.rooms.templates[room.name].width || 1),
-                  h = (ct.rooms.templates[room.name].height || 1);
+            const w = (getRoomTemplate(room.name).width || 1),
+                  h = (getRoomTemplate(room.name).height || 1);
             for (const copy of room.children) {
                 if (!('xstart' in copy) || copy.skipRealign) {
                     continue;
@@ -7403,7 +7368,7 @@ ct.pointer.setupListeners();
           [skippable] = [true];
 
     const oldStartingName = ct.rooms.starting;
-    const oldRoom = ct.rooms.templates[oldStartingName];
+    const oldRoom = getRoomTemplate(oldStartingName);
 
     let currentIndex = 0,
         currentLogo = null;
@@ -7599,101 +7564,23 @@ if ([false][0]) {
  */
 ct.content = JSON.parse(["{}"][0] || '{}');
 
-;
-let counters = {};
-
-counters.coins = 0;
-counters.O2 = 100;
-counters.canisterSlots = 3;
-
-class Canister {
-    elementSymbol;
+function getRoomTemplate(roomName) {
+	let template = ct.rooms.templates[roomName];
+	// DW Hack: if no room template - can we make it?
+	if ( ! template) {
+		let baseName = roomName.substring(0, roomName.lastIndexOf("_"));
+		// let endName = roomName.substring(roomName.lastIndexOf("_")); // not really needed
+		template = ct.rooms.templates[baseName];
+		if (template) {
+			// Have to copy functions
+			template = Object.assign({}, template); // deepCopy(template);
+			template.name = roomName;
+			ct.rooms.templates[baseName] = template;
+		}
+		console.log("roomName", roomName, baseName);
+	}
+	// ./DW
+	return template;
 }
-
-/**
- * @typedef{Canister[]}
- */
-let canisters = [];
-
-
-function addCanister(elementSymbol) {
-    if (canisters.length >= counters.canisterSlots) {
-        return;
-    }
-    let canister = new Canister();
-    canister.elementSymbol = elementSymbol;
-    canisters.push(canister);
-    // TODO UI 
-}
-
-
-/**
- * e.g. "H" -> true
- */
-let unlocked = {};
-;
-function getRandomChoice(p) {
-    return Math.random() > p;
-}
-function getRandomMember(set) {
-    let i = Math.floor(Math.random()*set.length);
-    return set[i];
-}
-
-let sqWidth = 40;
-
-let colour = {
-    red: 0xff0000,
-    blue: 0x0000ff,
-    green: 0x00ff00,
-    yellow: 0xffff00,
-    brown: 0xcc00ff,
-    orange: 0x00ffff,
-    pink: 0xff00ff,
-    grey: 0xcccccc,
-    aqua: 0x00ffaa,
-    reddy: 0xffaa33,
-}
-;
-
-
-class Pipe {
-	col;
-	xys = [];
-}
-class PipeBit {
-    /** start or end */
-    isEnd;
-    col;
-    /**
-     * two of NESW
-     */
-    dirn;
-}
-
-function eq(a, b) {
-    return a==b || JSON.stringify(a) == JSON.stringify(b);
-}
-/**
- * Like sincludes() but using `eq()`
- */
-function contains(x, array) {
-    if ( ! array) return false;
-    for(let i=0; i<array.length; i++) {
-        if (eq(array[i],x)) return true;
-    }
-    return false;
-}
-
-/**
- * @param {int[]} a0 [x,y]
- * @param {int[]} b0 [x,y]
- * @returns {boolean} true if a0 touches b0 (not diagonal)
- */
-function isTouching(a0, b0) {
-    return (Math.abs(a0[0] - b0[0])==1 && a0[1]==b0[1])
-            || (Math.abs(a0[1] - b0[1])==1 && a0[0]==b0[0]);
-}
-;
 
 export default ct;

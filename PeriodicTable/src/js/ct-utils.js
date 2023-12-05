@@ -36,9 +36,14 @@ export function doTalk(pSprite, text) {
         return;
     }
     pSprite.pSpeechBubble = ct.templates.copy("speech-bubble", pSprite.x-20, pSprite.y - pSprite.height);
-    // pSprite.pSpeechBubble.scale = 2;
+	// hack: larger bubble
+    pSprite.pSpeechBubble.scale.x = 2;
+	pSprite.pSpeechBubble.scale.y = 2;
 
     let ptext = addText(pSprite.pSpeechBubble, text, -130, -100);
+	// hack: scale-back
+	ptext.scale.x = 0.5;
+	ptext.scale.y = 0.5;
     console.log("talk!",ptext.width,ptext.height);
     // {wordWrapWidth: 440}
     // let ptext2 = addText(this, "Meow2 "+ct.room.element?.name, -100, 100);
@@ -55,3 +60,31 @@ export function doTalk(pSprite, text) {
 }
 
 
+export function eq(a, b) {
+    return a==b || JSON.stringify(a) == JSON.stringify(b);
+}
+/**
+ * Like sincludes() but using `eq()`
+ */
+export function contains(x, array) {
+    if ( ! array) return false;
+    for(let i=0; i<array.length; i++) {
+        if (eq(array[i],x)) return true;
+    }
+    return false;
+}
+
+export function deepCopy(a) {
+	if ( ! a) return a;
+	return JSON.parse(JSON.stringify(a));
+}
+
+/**
+ * @param {int[]} a0 [x,y]
+ * @param {int[]} b0 [x,y]
+ * @returns {boolean} true if a0 touches b0 (not diagonal)
+ */
+function isTouching(a0, b0) {
+    return (Math.abs(a0[0] - b0[0])==1 && a0[1]==b0[1])
+            || (Math.abs(a0[1] - b0[1])==1 && a0[0]==b0[0]);
+}
