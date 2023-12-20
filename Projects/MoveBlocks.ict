@@ -24,10 +24,6 @@ notes: >
 
   */
 libs:
-  place:
-    gridX: 1024
-    gridY: 1024
-    debugMode: true
   fittoscreen:
     mode: scaleFit
   inherit: {}
@@ -60,6 +56,12 @@ libs:
   transition: {}
   storage: {}
   vkeys: {}
+  place:
+    undefined: ''
+    gridX: 512
+    gridY: 512
+    debugMode: false
+    debugText: 16
 textures:
   - name: Tileset
     untill: 0
@@ -2297,9 +2299,131 @@ templates:
         lib: core
         code: >
 
-          this.depth = 10;
+          function occupied(This, x, y) {
+              assert(x);
+              return ct.place.occupied(This, x, y, "Solid");
+          }
 
-          this.movespeed = Math.min(10, 4 * ct.delta); // Max horizontal speed
+
+          // // Repel out of a jam?
+
+          // let bump = occupied(this);
+
+          // if (bump) {
+
+          //     // stop??
+
+          //     this.dx = 0;
+
+          //     this.dy = 0;
+
+          //     console.error("start stuck?!");
+
+          //     let b1 = {
+
+          //         x: this.x - this.shape.left, 
+
+          //         y: this.y - this.shape.top + this.height,
+
+          //         width: this.width - this.shape.left - this.shape.right, 
+
+          //         height: this.height - this.shape.top - this.shape.bottom
+
+          //     };
+
+          //     let b2 = {
+
+          //         x: bump.x - bump.shape.left, 
+
+          //         y: bump.y - bump.shape.top,
+
+          //         width: bump.width, // - bump.shape.left - bump.shape.right
+          + 5, 
+
+          //         height: bump.height// - this.shape.top - this.shape.bottom
+
+          //     };
+
+          //     // NB: all -ive for max (min abs)
+
+          //     // amount to add (ie dxl would be -ive) to b1.x to move left
+          and be clear
+
+          //     let dxl = b2.x - b1.x - b1.width;
+
+          //     let dxr =-(b2.x + b2.width - b1.x); // subtract to move right
+          and be clear (also -ive)
+
+          //     let dyu = b2.y - b1.y - b1.height; // add (-ive) to clear up //
+          TODO
+
+          //     let dyd = -(b2.y + b2.height - b1.y);// subtract (-ive) to
+          clear down
+
+          //     let dMin = Math.max(dxl, dxr, dyu, dyd);
+
+          //     console.log("BUMP lrud min",dxl,dxr,dyu,dyd,dMin, "xy",this.x,
+          this.y);
+
+          //     assert(Math.max(dxl,dxr,dyu,dyd) <=0);
+
+          //     if (dMin === dxl) {
+
+          //         this.x += dxl - 1;
+
+          //     } else if (dMin === dxr) {
+
+          //         this.x -= dxr + 1;
+
+          //     } else if (dMin === dyu) {
+
+          //         this.y += dyu - 5;
+
+          //     } else {
+
+          //         this.y -= dyd + 5;
+
+          //     }
+
+          //     console.log("BUMP new xy",this.x, this.y,
+          ct.place.occupied(this, this.x, this.y, "Solid"),"dx
+          dy",this.dx,this.dy);
+
+          // } else {
+
+          //     console.log("No bump xy",this.x, this.y, bump,"dx
+          dy",this.dx,this.dy);
+
+          // }
+
+
+          // if (ct.place.occupied(this, this.x, this.y, "Solid")) {
+
+          //     console.error("moved into occupied?!", "xy", this.x, this.y);
+
+          //     this.kill = true;
+
+          //     return;
+
+          //     // back off one
+
+          //     // this.x = oldX; //-= Math.sign(this.dx);
+
+          //     // this.y = oldY; //-= Math.sign(this.dy);
+
+          //     // if (ct.place.occupied(this, "Solid")) {
+
+          //     //     console.error("Still moved into occupied?!", "xy",
+          this.x, this.y,"dx",this.dx, "dy",this.dy);
+
+
+          //     // }
+
+          // }
+
+
+
+          this.depth = 10;
 
           this.action = "";
 
@@ -2308,10 +2432,13 @@ templates:
               console.log("VJoyX", ct.actions.VJoyX.value, ct.actions.VJoyX.down);
           }
 
+
+          // Left / Right
+
           if (ct.actions.MoveLeftRight.down) {
               // If the A key or left arrow on a keyboard is down, then move to left    
               let multiplier = ct.actions.MoveLeftRight.value;
-              this.dx = this.movespeed * multiplier;
+              this.dx = 10 * multiplier;
               // console.log("MoveLeftRight",this.dx);
               this.action = "LR";
               this.scale.x = multiplier * Math.abs(this.scale.x); // mirror left/right
@@ -2333,81 +2460,192 @@ templates:
           /**
            * @returns {boolean} box collision test
            */
-          function testBoxCollision(bounds1, bounds2)
+          // function testBoxCollision(bounds1, bounds2)
 
-          {
-              console.log("testBoxCollision",bounds1, bounds2);
-              let hit = bounds1.x < bounds2.x + bounds2.width
-                  && bounds1.x + bounds1.width > bounds2.x
-                  && bounds1.y < bounds2.y + bounds2.height
-                  && bounds1.y + bounds1.height > bounds2.y;
-              if ( ! this.pg1) {
-                  let pg1 = new PIXI.Graphics();
-                  this.pg1 = pg1;
-                  ct.room.addChild(this.pg1);            
-                  let pg2 = new PIXI.Graphics();
-                  this.pg2 = pg2;
-                  ct.room.addChild(this.pg2);            
-              }
-              this.pg1.clear();
-              this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);
-              this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);
-              this.pg1.beginFill(0xCCFFCC,1);
-              this.pg1.drawCircle(bounds1.x, bounds1.y, 3);
+          // {
 
-              this.pg2.clear();
-              this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);
-              this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);
-              this.pg2.beginFill(0xCCCCFF,1);
-              this.pg2.drawCircle(bounds2.x, bounds2.y, 3);
+          //     console.log("testBoxCollision",bounds1, bounds2);
 
-              return hit;
-          }
+          //     let hit = bounds1.x < bounds2.x + bounds2.width
+
+          //         && bounds1.x + bounds1.width > bounds2.x
+
+          //         && bounds1.y < bounds2.y + bounds2.height
+
+          //         && bounds1.y + bounds1.height > bounds2.y;
+
+          //     if ( ! this.pg1) {
+
+          //         let pg1 = new PIXI.Graphics();
+
+          //         this.pg1 = pg1;
+
+          //         ct.room.addChild(this.pg1);            
+
+          //         let pg2 = new PIXI.Graphics();
+
+          //         this.pg2 = pg2;
+
+          //         ct.room.addChild(this.pg2);            
+
+          //     }
+
+          //     this.pg1.clear();
+
+          //     this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);
+
+          //    
+          this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);
+
+          //     this.pg1.beginFill(0xCCFFCC,1);
+
+          //     this.pg1.drawCircle(bounds1.x, bounds1.y, 3);
 
 
-          // leads to stuck monkey bugs 'cos movement is blocked by collide
+          //     this.pg2.clear();
 
-          function isGrounded(This, groundCollide) {
-                  bottom: 1
-          left: 26
+          //     this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);
 
-          right: 32
+          //    
+          this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);
 
-          top: 115
-              let feetBounds = {
-                  x: This.x - This.shape.left + 1, 
-                  y: This.y - This.shape.top + This.height - 2,
-                  width: This.width - This.shape.left - This.shape.right - 2, 
-                  height: 50 //this.height + 1// - this.shape.top - this.shape.bottom
-              };
-          //     bottom: 1
+          //     this.pg2.beginFill(0xCCCCFF,1);
+
+          //     this.pg2.drawCircle(bounds2.x, bounds2.y, 3);
+
+
+          //     return hit;
+
+          // }
+
+
+          // // leads to stuck monkey bugs 'cos movement is blocked by collide
+
+          // function isGrounded(This, groundCollide) {
+
+          //         bottom: 1
 
           // left: 26
 
           // right: 32
 
           // top: 115
-              // let gBounds = groundCollide.getBounds(true);
-              let gb2 = {
-                  x: groundCollide.x - groundCollide.shape.left, 
-                  y: groundCollide.y - groundCollide.shape.top,
-                  width: groundCollide.width, // - groundCollide.shape.left - groundCollide.shape.right + 5, 
-                  height: groundCollide.height// - this.shape.top - this.shape.bottom
-              };
-              return testBoxCollision(feetBounds, gb2);
+
+          //     let feetBounds = {
+
+          //         x: This.x - This.shape.left + 1, 
+
+          //         y: This.y - This.shape.top + This.height - 2,
+
+          //         width: This.width - This.shape.left - This.shape.right -
+          2, 
+
+          //         height: 50 //this.height + 1// - this.shape.top -
+          this.shape.bottom
+
+          //     };
+
+          // //     bottom: 1
+
+          // // left: 26
+
+          // // right: 32
+
+          // // top: 115
+
+          //     // let gBounds = groundCollide.getBounds(true);
+
+          //     let gb2 = {
+
+          //         x: groundCollide.x - groundCollide.shape.left, 
+
+          //         y: groundCollide.y - groundCollide.shape.top,
+
+          //         width: groundCollide.width, // - groundCollide.shape.left -
+          groundCollide.shape.right + 5, 
+
+          //         height: groundCollide.height// - this.shape.top -
+          this.shape.bottom
+
+          //     };
+
+          //     return testBoxCollision(feetBounds, gb2);
+
+          // }
+
+
+          if ( ! this.collisionCheck) {
+              this.y = this.y + this.dy;
+              this.x = this.x + this.dx;
+              // console.log("no check");
+              return;
           }
 
 
-          // ??Move this into the moveByAxes -> hit below??
+          // always down
+
+          this.dy += this.gravity;
+
+
+          // for checking the move
+
+          let fullY = this.y + this.dy;
+
+
+          // Move! maybe
+
+          // ...stick to whole pixels
+
+          let oldX = this.x, oldY = this.y;
+
+          let dx = Math.floor(this.dx * ct.delta);
+
+          let dy = Math.floor(this.dy * ct.delta);
+
+          let newX = this.x + dx;
+
+          let newY = this.y + dy;
+
+          let hit = {};
+
+          hit.x = occupied(this, newX, oldY);
+
+          if (hit.x) {
+              console.log("hit x", newX, oldY, "go back to ",oldX, oldY,"dx dy", this.dx, this.dy);
+              newX = oldX;
+              this.dx = 0;
+          }
+
+          hit.y = occupied(this, newX, newY);
+
+          if (hit.y) {
+              console.log("hit y", this.x, newY, "go back to ",this.x, oldY,"dx dy", this.dx, this.dy);
+              newY = oldY;
+              this.dy = 0;
+          }
+
+          this.x = newX;
+
+          this.y = newY;
+
+
+          // let hit = ct.place.moveByAxes(this, Math.round(this.dx),
+          Math.round(this.dy), "Solid", 1);
+
+
+          console.log("xy", this.x, this.y, "hit",hit);
+
+
+          if ( ! hit.x && ! hit.y) {
+              return; // done
+          }
+
 
           // If there is ground underneath the Chimp
 
-          let groundCollide = ct.place.occupied(this, this.x, this.y + 1,
-          'Solid');
+          let grounded = !!hit.y;
 
-          let grounded = !!groundCollide;
-
-          if (groundCollide) {
+          if (grounded) {
               // let s1 = this;
               // console.log("groundCollide",groundCollide, "shape", this.shape);
               // if (isGrounded(this, groundCollide)) {
@@ -2424,53 +2662,42 @@ templates:
                   this.dy = 0;
                   // console.log("ground vspeed",this.dy,"y",this.y);
               }
-              // } else {
-              //     console.log("NO collide");
-              //     grounded = false;
-              // }
-          } 
+          }
+
 
           if ( ! grounded) {
               if (this.y > ct.camera.height) {
                   console.log("!grounded stop up")
-                  // console.log("abyss", this.y, ct.camera.height, ct.camera, this, ct.room);
                   this.dy = 0;
                   this.action += "gone";
               } else {
                   console.log("!grounded fall")
-                  // If there is no ground
-                  this.dy += this.gravity * ct.delta;
-                  // console.log("fall",this.dy);
                   this.action += "fall";
               }
           }
 
 
-          if (this.collisionCheck == true) {
-              let fullY = this.y + this.dy;
-              let hit = ct.place.moveByAxes(this, this.dx, this.dy, "Solid", 1);
-              if (hit) {
-                  console.log("hit",hit);
-                  if (hit.x.template === "door") {
-                      // TODO refactor to share code with manholes
-                      const door = hit.x;
-                      if (ct.actions.MoveLeftRight.down) {
-                          console.log("lr door?", getSymbol(), "nextSymbol",door.nextSymbol, "unlocked",isUnlocked(getSymbol(), door.nextSymbol),ct.actions.MoveLeftRight.value, door);
-                          if (door.unlocked || isUnlocked(getSymbol(), door.nextSymbol)) {
-                              assert(door.nextSymbol, hit);
-                              moveRoom("Room_Platformer", {symbol:door.nextSymbol});
-                          } else {
-                              if (UI.modal) {
-                                  console.log("modal already", UI.modal);
-                                  return;
-                              }
-                              console.log("Make modal!");
-                              updateRoomState("Room_CodewordModal", {nextSymbol: door.nextSymbol});
-                              let codeRoom = ct.rooms.append('Room_CodewordModal');                    
-                              UI.modal = codeRoom;
-                          }
+
+          if (hit.x?.template === "door") {
+              // TODO refactor to share code with manholes
+              const door = hit.x;
+              if (ct.actions.MoveLeftRight.down) {
+                  console.log("lr door?", getSymbol(), "nextSymbol",door.nextSymbol, "unlocked",isUnlocked(getSymbol(), door.nextSymbol),ct.actions.MoveLeftRight.value, door);
+                  if (door.unlocked || isUnlocked(getSymbol(), door.nextSymbol)) {
+                      assert(door.nextSymbol, hit);
+                      moveRoom("Room_Platformer", {symbol:door.nextSymbol});
+                  } else {
+                      if (UI.modal) {
+                          console.log("modal already", UI.modal);
+                          return;
                       }
+                      console.log("Make modal!");
+                      updateRoomState("Room_CodewordModal", {nextSymbol: door.nextSymbol});
+                      let codeRoom = ct.rooms.append('Room_CodewordModal');                    
+                      UI.modal = codeRoom;
                   }
+              }
+          }
                   // if ( ! grounded && this.dy > 0) { // fall regardless?
                   //     console.log("!grounded fall while"); 
                   //     while(this.y < fullY && ! grounded) {
@@ -2481,17 +2708,16 @@ templates:
                   //         grounded = isGrounded(this, groundCollide);
                   //     }
                   // }
-              }
-              if (this.dy < 0 && this.y - fullY > 1) { // crash into ceiling? then stop going up
-                  // console.log(this.dy, fullY, this.y)
-                  this.dy = 0;
-              }
-          } else {
-              this.y = this.y + this.dy;
+              
+          if (this.dy < 0 && this.y - fullY > 1) { // crash into ceiling? then
+          stop going up
+              // console.log(this.dy, fullY, this.y)
+              this.dy = 0;
           }
         arguments: {}
       - eventKey: OnCreate
-        code: |-
+        code: |
+          window.chimp = this; // debug
 
           this.jumpSpeed = -15;
           this.animationSpeed = 0.15;
@@ -2504,7 +2730,10 @@ templates:
           this.collisionCheck = true;
 
           // addCanister("He");
-          // addCanister("C");
+
+          // paranoia - clamp
+          this.x = Math.round(this.x);
+          this.y = Math.round(this.y);
         arguments: {}
         lib: core
       - eventKey: collisionTemplate
@@ -5286,30 +5515,8 @@ rooms:
         opacity: 1
         tint: 16777215
         scale:
-          x: 0.36781609
-          'y': 0.26373626
-        rotation: 0
-        uid: BgCfnp8knKpm9J
-        exts: {}
-        customProperties: {}
-      - x: 768
-        'y': 312
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 0.36781609
-          'y': 0.26373626
-        rotation: 0
-        uid: BgCfnp8knKpm9J
-        exts: {}
-        customProperties: {}
-      - x: 832
-        'y': 312
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 0.36781609
-          'y': 0.26373626
+          x: 0.73563218
+          'y': 0.79120879
         rotation: 0
         uid: BgCfnp8knKpm9J
         exts: {}
@@ -5968,9 +6175,31 @@ rooms:
         uid: TQtRCB1Lb457JW
         exts: {}
         customProperties: {}
+      - x: 784
+        'y': 312
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 0.5973822
+          'y': 1
+        rotation: 0
+        uid: 1cRbbTTRzCHgjn
+        exts: {}
+        customProperties: {}
+      - x: 304
+        'y': 472
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 0.83769634
+          'y': 1
+        rotation: 0
+        uid: 1cRbbTTRzCHgjn
+        exts: {}
+        customProperties: {}
     tiles: []
     extends: {}
-    lastmod: 1702844406508
+    lastmod: 1702996437613
     events:
       - eventKey: OnRoomStart
         code: >
@@ -8188,7 +8417,7 @@ rooms:
         extends: {}
         hidden: false
     extends: {}
-    lastmod: 1702833764066
+    lastmod: 1702996445970
     events:
       - eventKey: OnRoomStart
         code: >
