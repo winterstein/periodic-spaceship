@@ -650,7 +650,7 @@ textures:
     isBlank: false
     group: !<tag:yaml.org,2002:js/undefined> ''
     source: /home/daniel/ct.js/img/chimp-96x3.png
-  - lastmod: 1702838554223
+  - lastmod: 1703262370121
     type: texture
     name: chimp-idle
     untill: 0
@@ -1149,7 +1149,7 @@ textures:
     group: !<tag:yaml.org,2002:js/undefined> ''
     source: /home/daniel/ct.js/img/modal.png
     ignoreTiledUse: true
-  - lastmod: 1701536759690
+  - lastmod: 1703237070501
     type: texture
     name: side-panel
     untill: 0
@@ -1642,7 +1642,7 @@ textures:
     isBlank: false
     group: !<tag:yaml.org,2002:js/undefined> ''
     source: /home/daniel/ct.js/img/table-ship.png
-  - lastmod: 1702036252956
+  - lastmod: 1703262430585
     type: texture
     name: spit
     untill: 0
@@ -1671,7 +1671,7 @@ textures:
     isBlank: false
     group: !<tag:yaml.org,2002:js/undefined> ''
     source: /home/daniel/ct.js/img/spit.png
-    r: 12
+    r: 11
   - lastmod: 1702059358908
     type: texture
     name: sailor
@@ -2052,7 +2052,7 @@ textures:
     isBlank: false
     group: !<tag:yaml.org,2002:js/undefined> ''
     source: /home/daniel/ct.js/img/button.scaled.png
-  - lastmod: 1703172372195
+  - lastmod: 1703461962352
     type: texture
     name: snake-spit
     untill: 0
@@ -2072,8 +2072,8 @@ textures:
     offy: 0
     origname: ihrRDJbtgGhqP6F.png
     shape: rect
-    left: 37
-    right: 32
+    left: 34
+    right: 31
     top: 79
     bottom: 2
     uid: hrRDJbtgGhqP6F
@@ -2284,6 +2284,93 @@ textures:
     isBlank: false
     group: !<tag:yaml.org,2002:js/undefined> ''
     source: /home/daniel/ct.js/img/pluming-container.png
+  - lastmod: 1703200529938
+    type: texture
+    name: magnifier
+    untill: 0
+    grid:
+      - 1
+      - 1
+    axis:
+      - 54
+      - 53
+    marginx: 0
+    marginy: 0
+    imgWidth: 108
+    imgHeight: 107
+    width: 108
+    height: 107
+    offx: 0
+    offy: 0
+    origname: i5RhKC6Njn6DdPJ.png
+    shape: rect
+    left: 54
+    right: 54
+    top: 53
+    bottom: 54
+    uid: 5RhKC6Njn6DdPJ
+    padding: 1
+    isBlank: false
+    group: !<tag:yaml.org,2002:js/undefined> ''
+    source: /home/daniel/ct.js/img/magnifier-opacity.png
+  - lastmod: 1703199695785
+    type: texture
+    name: msg-canister
+    untill: 0
+    grid:
+      - 1
+      - 1
+    axis:
+      - 0
+      - 0
+    marginx: 0
+    marginy: 0
+    imgWidth: 91
+    imgHeight: 228
+    width: 91
+    height: 228
+    offx: 0
+    offy: 0
+    origname: ikq57G5kqTTfW8F.png
+    shape: rect
+    left: 0
+    right: 91
+    top: 0
+    bottom: 228
+    uid: kq57G5kqTTfW8F
+    padding: 1
+    isBlank: false
+    group: !<tag:yaml.org,2002:js/undefined> ''
+    source: /home/daniel/ct.js/img/msg-canister.png
+  - lastmod: 1703199695786
+    type: texture
+    name: tube
+    untill: 0
+    grid:
+      - 1
+      - 1
+    axis:
+      - 0
+      - 0
+    marginx: 0
+    marginy: 0
+    imgWidth: 200
+    imgHeight: 494
+    width: 200
+    height: 494
+    offx: 0
+    offy: 0
+    origname: iD1w3c852MNzPjd.png
+    shape: rect
+    left: 0
+    right: 200
+    top: 0
+    bottom: 494
+    uid: D1w3c852MNzPjd
+    padding: 1
+    isBlank: false
+    group: !<tag:yaml.org,2002:js/undefined> ''
+    source: /home/daniel/ct.js/img/tube.png
 skeletons: []
 templates:
   - type: template
@@ -2298,6 +2385,9 @@ templates:
       - eventKey: OnStep
         lib: core
         code: >
+
+          let MAX_X = 1060;
+
 
           function occupied(This, x, y) {
               assert(x);
@@ -2335,6 +2425,10 @@ templates:
               let dxr =-(b2.x + b2.width - b1.x); // subtract to move right and be clear (also -ive)
               let dyu = b2.y - b1.y - b1.height; // add (-ive) to clear up // TODO
               let dyd = -(b2.y + b2.height - b1.y);// subtract (-ive) to clear down
+              // avoid bump-off-screen
+              // if (b1.x < 50) dxl = 0;
+              // if (b1.x > MAX_X-50) dxr = 0;
+              // pick the smallest bump
               let dMin = Math.max(dxl, dxr, dyu, dyd);
               console.log("BUMP lrud min",dxl,dxr,dyu,dyd,dMin, "xy",this.x, this.y);
               assert(Math.max(dxl,dxr,dyu,dyd) <=0);
@@ -2352,7 +2446,6 @@ templates:
           } else {
               // console.log("No bump xy",this.x, this.y, bump,"dx dy",this.dx,this.dy);
           }
-
 
 
           if (ct.actions.VJoyX && ct.actions.VJoyX.value) {
@@ -2381,6 +2474,14 @@ templates:
               }
               // console.log("idle",this.dx);
               this.action = "idle";
+          }
+
+          // duck
+
+          if (ct.actions.Down.down) {
+              this.scale.y = 0.7; // tween??
+          } else {
+              this.scale.y = 1;
           }
 
 
@@ -2457,6 +2558,18 @@ templates:
               newY = oldY;
               this.dy = 0;
           }
+
+
+          // on screen always
+
+          if (newX<0) newX = 0;
+
+          if (newY<0) newY = 0;
+
+          if (newX>MAX_X) newX = MAX_X;
+
+          if (newY>ct.room.height) newY = ct.room.height;
+
 
           this.x = newX;
 
@@ -2560,67 +2673,6 @@ templates:
           // }
 
 
-          /**
-           * @returns {boolean} box collision test
-           */
-          // function testBoxCollision(bounds1, bounds2)
-
-          // {
-
-          //     console.log("testBoxCollision",bounds1, bounds2);
-
-          //     let hit = bounds1.x < bounds2.x + bounds2.width
-
-          //         && bounds1.x + bounds1.width > bounds2.x
-
-          //         && bounds1.y < bounds2.y + bounds2.height
-
-          //         && bounds1.y + bounds1.height > bounds2.y;
-
-          //     if ( ! this.pg1) {
-
-          //         let pg1 = new PIXI.Graphics();
-
-          //         this.pg1 = pg1;
-
-          //         ct.room.addChild(this.pg1);            
-
-          //         let pg2 = new PIXI.Graphics();
-
-          //         this.pg2 = pg2;
-
-          //         ct.room.addChild(this.pg2);            
-
-          //     }
-
-          //     this.pg1.clear();
-
-          //     this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);
-
-          //    
-          this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);
-
-          //     this.pg1.beginFill(0xCCFFCC,1);
-
-          //     this.pg1.drawCircle(bounds1.x, bounds1.y, 3);
-
-
-          //     this.pg2.clear();
-
-          //     this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);
-
-          //    
-          this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);
-
-          //     this.pg2.beginFill(0xCCCCFF,1);
-
-          //     this.pg2.drawCircle(bounds2.x, bounds2.y, 3);
-
-
-          //     return hit;
-
-          // }
-
 
           // // leads to stuck monkey bugs 'cos movement is blocked by collide
 
@@ -2692,8 +2744,6 @@ templates:
           this.getRoom().player = this;
           this.collisionCheck = true;
 
-          // addCanister("He");
-
           // paranoia - clamp
           this.x = Math.round(this.x);
           this.y = Math.round(this.y);
@@ -2742,7 +2792,7 @@ templates:
         lib: place
     extends:
       cgroup: ''
-    lastmod: 1703172165398
+    lastmod: 1703461941208
     uid: CfLHnnjb3G8L59
   - type: template
     name: Block
@@ -2792,7 +2842,7 @@ templates:
 
           let msg = chat4symbol[ct.room.element?.symbol];
           if ( ! msg) {
-              msg = "Meow. You're in the "+ct.room.element?.name+" room.";
+              msg = new Chat("Meow. You're in the "+ct.room.element?.name+" room.");
           }
 
           if ( ! this.meow) {
@@ -2800,12 +2850,24 @@ templates:
               ct.sound.spawn("Sound_Cat", {volume:0.5});
           }
 
-          this.talking = doTalk(this, msg);
+          if (this.pTalkToMe) this.pTalkToMe.visible = false;
+
+          doTalk(this, msg);
         arguments:
           template: CfLHnnjb3G8L59
         lib: place
       - eventKey: OnStep
-        code: |-
+        code: >-
+
+          if (this.talking || this.pSpeechBubble) { // bug - this.talking isnt a
+          reliable marker??
+              if (this.pTalkToMe) {
+                  this.pTalkToMe.visible = false;
+                  this.pTalkToMe.alpha = 0;
+              }
+          }
+
+
           if (this.talking) {
               let chimp = getPlayer();
               if (chimp && ! ct.place.collide(this, chimp)) {
@@ -2814,20 +2876,25 @@ templates:
                       this.talking.control.stop = true;
                       this.talking = null;
                   }
-              //     if (this.talkingcontrol.stop) {
-              //     console.log("stop talking", text);
-              //     if (pSprite.pSpeechBubble) {
-              //         pSprite.pSpeechBubble.kill = true;
-              //     }
-              //     pSprite.pSpeechBubble = null;
-              // }
-
+              }
+              return;
+          } else if ( ! this.pSpeechBubble) {
+              let msg = chat4symbol[ct.room.element?.symbol];
+              if (msg && msg.lines.find(line => ! line.done)) {
+                  if ( ! this.pTalkToMe) {
+                      this.pTalkToMe = ct.templates.copy("speech-bubble", -5, -this.height -5);
+                      this.addChild(this.pTalkToMe);
+                      this.pTalkToMe.scale.x = 0.2;
+                      this.pTalkToMe.scale.y = 0.2;            
+                  }
+                  this.pTalkToMe.visible = true;
+                  this.pTalkToMe.alpha = 0.75;
               }
           }
         arguments: {}
         lib: core
     extends: {}
-    lastmod: 1702662271658
+    lastmod: 1703198342425
     uid: 3BN2zrLb27ftrC
   - type: template
     name: snake-spit
@@ -3067,13 +3134,7 @@ templates:
           // add as layer??
           function switchToPuzzle() {
               let puzzleRoomName = "Room_Puzzle_Pipes";
-              if (ct.room.name !== puzzleRoomName) {
-                  let chimp = getTemplates(ct.room, "chimp")[0];       
-                  updateRoomState(puzzleRoomName, {symbol});        
-                  // roomOptions[puzzleRoomName] = Object.assign({}, roomOptions["Room_Platformer"]); // copy {symbol}
-                  updateRoomState("Room_Platformer", {playerx: chimp.x, playery: chimp.y}); // keep chimp xy        
-                  ct.rooms.switch(puzzleRoomName);
-              }
+              moveRoom(puzzleRoomName, {symbol}, {});
           }
 
           assert(symbol, "no symbol");
@@ -3102,7 +3163,7 @@ templates:
         arguments: {}
         lib: core
     extends: {}
-    lastmod: 1702833106036
+    lastmod: 1703260976429
     uid: TQtRCB1Lb457JW
   - type: template
     name: tank-1
@@ -3160,14 +3221,14 @@ templates:
       - eventKey: OnCreate
         code: >
           console.log("Make info-bar", ct.room.element,
-          roomOptions[ct.room.name]);
+          roomOptions[ct.room.name], this.x,this.y, this);
 
           this.alpha = 1;
         arguments: {}
         lib: core
     extends:
       cgroup: Solid
-    lastmod: 1702498226905
+    lastmod: 1703237129139
     uid: LHKPQrBhH2DnNt
   - type: template
     name: modal
@@ -3471,23 +3532,25 @@ templates:
         code: |
           // console.log(ct.delta);
           if (this.dx || this.dy) {
-              // console.log("move spit",this.dx);
-              // let dx = Math.floor(this.dx*ct.delta);
-              // let dy = Math.floor(this.dy*ct.delta);
-              // let fullX = this.x + dx;
-              // let fullY = this.y + this.dy*ct.delta;
-              // this.x = fullX; this.y = fullY;
               let hit = ct.place.moveByAxes(this, this.dx*ct.delta, this.dy*ct.delta, "Solid", 1);
               if (hit) {
-                  console.log("hit", hit, this);
                   this.kill = true;
+                  this.visible = false;
               }
           }
         arguments: {}
       - eventKey: collisionTemplate
         code: |-
 
-          doLoseLife();
+          // double check (seeing false height hit)
+          // console.log("hit?");
+
+          // workaround for scale bug
+          let isHit = testBoxCollision(getBounds(other), getBounds(this));
+          console.log("hit", isHit, this);
+          if (isHit) {
+              doLoseLife();
+          }
         arguments:
           template: CfLHnnjb3G8L59
         lib: place
@@ -3500,7 +3563,7 @@ templates:
           group: Solid
         lib: place
     extends: {}
-    lastmod: 1702237381820
+    lastmod: 1703461819214
     uid: 2rwq7jrWm7w8P8
   - type: template
     name: table-ship
@@ -3815,13 +3878,14 @@ templates:
       - eventKey: OnCreate
         code: |
 
+          this.total =+Object.keys(info4symbol).length;
           // HACK numbers by tweaking
-          setText(this, "0", 55, -35, {style:'Style_Score'});
+          setText(this, "0 / "+this.total, 55, -35, {style:'Style_Score'});
         arguments: {}
         lib: core
       - eventKey: OnDraw
         code: |-
-          let v = ""+(counters.elements || 0);
+          let v = ""+(counters.elements || 0)+" / "+this.total;
           if (this.pText.text !== v) this.pText.text = v;
         arguments: {}
         lib: core
@@ -3836,7 +3900,7 @@ templates:
         arguments: {}
         lib: core
     extends: {}
-    lastmod: 1702747277556
+    lastmod: 1703198545214
     uid: r5L6tg3f56jgJ4
   - type: template
     name: PlumbingContainer
@@ -3895,6 +3959,102 @@ templates:
     extends: {}
     lastmod: 1703172110735
     uid: nFqLLKRM5LTfgL
+  - type: template
+    name: magnifier
+    depth: 0
+    texture: 5RhKC6Njn6DdPJ
+    playAnimationOnStart: false
+    loopAnimation: true
+    animationFPS: 30
+    visible: true
+    events:
+      - eventKey: OnStep
+        lib: core
+        code: |-
+          let symbol = getSymbol();
+          if ( ! symbol) return;
+          // if (this.symbol = symbol) return;
+          this.symbol = symbol;
+
+          if ( ! isUnlocked(symbol)) {
+              return;
+          }
+
+          if ( ! this.theta) this.theta = 0;
+          this.theta += 0.01*ct.delta;
+
+
+          const pg = new PIXI.Graphics();
+
+          // TODO sit pg behind this
+          // pg.x = this.x;
+          // pg.y = this.y;
+          // this.parent.addChild(pg);
+
+          this.addChild(pg);
+          const RADIUS = (this.height*0.35)
+
+          // black backdrop
+          pg.clear();
+          pg.beginFill(0x000000, 0.5);
+          // pg.drawRect(0,0,5,5);
+          pg.drawCircle(0, 0, RADIUS);
+
+          // draw the atom
+          let info = info4symbol[symbol];
+          let orbitals = info.electron_configuration.split(" ");
+          let lasto = orbitals[orbitals.length-1];
+          let maxn = new Number(lasto[0]);
+
+          const R = RADIUS / (1+maxn);
+          // console.log(R, RADIUS, maxn);
+          // console.log(info);
+          let n = info.atomic_number;
+          // spiral nucleus
+          for(let i=0; i<2*n; i++) {
+              let nmi = 2*n - i;
+              let a = 0.5 + (i/(4*n));
+              pg.beginFill(i%2===0? 0xcccccc : 0xff3333, a);
+              let x = 0.1*R * Math.sqrt(nmi)*Math.cos(1*i);
+              let y = 0.1*R * Math.sqrt(nmi)*Math.sin(1*i);
+              pg.drawCircle(x, y, 2);
+          }
+          // electron_configuration 1s^2
+          let now = new Date().getTime();
+          let blink = 0x6666cc;
+          let blinkAlpha = Math.cos(now/500);
+
+          for(let i=0; i<orbitals.length; i++) {
+              let orbital = orbitals[i];
+              if (orbital[0] === "[") continue; // TODO draw e.g. Silver = "[Kr] 4d^10 5s^1"
+              let r = R * new Number(orbital[0]);
+              let n = new Number(orbital.substr(orbital.indexOf("^")+1));
+              let shell = orbital.substr(0, orbital.indexOf("^"));
+              let shellSize = size4shell[shell];
+              assert(shellSize, orbital);
+              let spread = 2*Math.PI/shellSize;
+              for(let e=0; e<shellSize; e++) {
+                  let x = r*Math.cos(spread*(e+i*0.5) +this.theta/(i+1));
+                  let y = r*Math.sin(spread*(e+i*0.5) +this.theta/(i+1));
+                  if (e<n) {
+                      pg.beginFill(0x0000ff);
+                  } else {
+                      // missing electrons in the valence shell
+                      if (blinkAlpha <= 0) continue;
+                      pg.beginFill(blink, blinkAlpha); 
+                  }
+                  pg.drawCircle(x, y, 2);
+              }
+          }
+        arguments: {}
+      - eventKey: OnCreate
+        code: |+
+
+        arguments: {}
+        lib: core
+    extends: {}
+    lastmod: 1703260395717
+    uid: PQcq8dPnncpj4H
 sounds:
   - name: Wood_Start
     uid: 42e768ce-6c19-4c34-9f14-11e257ecff18
@@ -4188,7 +4348,7 @@ rooms:
         customProperties: {}
     tiles: []
     extends: {}
-    lastmod: 1702844334441
+    lastmod: 1703262319859
     events:
       - eventKey: OnRoomStart
         code: >
@@ -4442,6 +4602,8 @@ rooms:
                   let chimp = getTemplates(room, "chimp")[0];
                   if (chimp) { // paranoia (maybe the chimp got killed)
                       chimp.x = roomState.playerx;
+                      if (chimp.x < 160) chimp.x = 160;
+                      if (chimp.x > 860) chimp.x = 860;
                       chimp.y = roomState.playery;
                   }
               }
@@ -4632,9 +4794,20 @@ rooms:
         uid: r5L6tg3f56jgJ4
         exts: {}
         customProperties: {}
+      - x: 1174.49999996
+        'y': 94.88785043
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1.23
+          'y': 1.23
+        rotation: 0
+        uid: PQcq8dPnncpj4H
+        exts: {}
+        customProperties: {}
     tiles: []
     extends: {}
-    lastmod: 1702754693916
+    lastmod: 1703261820482
     events:
       - eventKey: OnRoomStart
         code: |+
@@ -5087,7 +5260,7 @@ rooms:
         customProperties: {}
     tiles: []
     extends: {}
-    lastmod: 1702830702247
+    lastmod: 1703462345935
     events:
       - eventKey: OnRoomStart
         code: |-
@@ -5160,9 +5333,9 @@ rooms:
               // Bridge + Captain
               let rbridge = ct.templates.copy("bridge");
               rbridge.tint = 0xCCCCCC; // darken
-              console.log("scale 0",this.height, rbridge.height);
+              // console.log("scale 0",this.height, rbridge.height);
               let scale = 600 / rbridge.height;
-              console.log("scale",scale,this.height, rbridge.height,ct.room.width);
+              // console.log("scale",scale,this.height, rbridge.height,ct.room.width);
               rbridge.scale.y = scale;
               rbridge.scale.x = scale;
               rbridge.x = ct.room.width - rbridge.width - 10;
@@ -5522,12 +5695,12 @@ rooms:
         uid: BgCfnp8knKpm9J
         exts: {}
         customProperties: {}
-      - x: 640
+      - x: 624
         'y': 640
         opacity: 1
         tint: 16777215
         scale:
-          x: 1
+          x: -1
           'y': 1
         rotation: 0
         uid: fhddgJcNKrhtmk
@@ -5918,7 +6091,7 @@ rooms:
         uid: T5qkQrDTnNDf3D
         exts: {}
         customProperties: {}
-      - x: 976
+      - x: 996
         'y': 608
         opacity: 1
         tint: 16777215
@@ -5942,7 +6115,7 @@ rooms:
         customProperties:
           newProperty1: ''
           newProperty2: ''
-      - x: 64
+      - x: 54
         'y': 608
         opacity: 1
         tint: 16777215
@@ -6033,7 +6206,7 @@ rooms:
         exts: {}
         customProperties:
           newProperty3: ''
-      - x: 64
+      - x: 54
         'y': 208
         opacity: 1
         tint: 16777215
@@ -6053,28 +6226,6 @@ rooms:
           'y': 0.56140351
         rotation: 0
         uid: dzFzhGJ9PJ9CHk
-        exts: {}
-        customProperties: {}
-      - x: 1088
-        'y': 288
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1
-          'y': 1
-        rotation: -1.5707963267948966
-        uid: 1cRbbTTRzCHgjn
-        exts: {}
-        customProperties: {}
-      - x: 1088
-        'y': 480
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1
-          'y': 1
-        rotation: -1.5707963267948966
-        uid: 1cRbbTTRzCHgjn
         exts: {}
         customProperties: {}
       - x: 1088
@@ -6121,7 +6272,7 @@ rooms:
         uid: dzFzhGJ9PJ9CHk
         exts: {}
         customProperties: {}
-      - x: 976
+      - x: 992
         'y': 208
         opacity: 1
         tint: 16777215
@@ -6154,9 +6305,20 @@ rooms:
         uid: 1cRbbTTRzCHgjn
         exts: {}
         customProperties: {}
+      - x: 416
+        'y': 704
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1
+          'y': 1
+        rotation: 0
+        uid: 3BN2zrLb27ftrC
+        exts: {}
+        customProperties: {}
     tiles: []
     extends: {}
-    lastmod: 1703172309601
+    lastmod: 1703262336584
     events:
       - eventKey: OnRoomStart
         code: >
@@ -9786,9 +9948,9 @@ emitterTandems:
     type: tandem
 scripts:
   - name: utils
-    code: "\nlet seed = Math.floor(Math.random()*1000);\n\nconst random = ct.random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return random() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(random()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nUI = {};\n\nfunction assert(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return ct.templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    assert( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        assert(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = ct.templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.x = ct.room.width / 3;\n    pTextBlock.width = ct.room.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    ct.timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (this.pTooltip) {\n        if (this.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    this.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if (this.pTooltip) {\n        this.pTooltip.destroy();\n        this.pTooltip = null;\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    assert(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = ct.styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    assert(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n\nfunction doTalk(pSprite, text) {\n    // chain async calls to step through the text\n    let lines = text.split(\"\\n\\n\");\n    const control = {};\n    let p = null;\n    lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    return p;\n}\n\nasync function doTalk2(pSprite, text, control) {\n    if (control.stop) {\n        console.log(\"stop talking\", text);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }\n    let leafRoom = ct.room.children.filter(kid => {\n        console.warn(typeof(kid),kid);\n        return false;\n    });\n    pSprite.pSpeechBubble = ct.templates.copyIntoRoom(\"speech-bubble\", pSprite.x-20, pSprite.y - pSprite.height, ct.room);\n    // pSprite.pSpeechBubble.depth = -1000;\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    // console.log(\"scale\",scale,text.length);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth});\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n    // console.log(\"talk!\",ptext.width,ptext.height);\n    \n    // on top (predates room merge bugfix)\n    // pSprite.pSpeechBubble.zIndex = 1000;\n    // ct.room.sortableChildren = true;\n    // ct.room.sortChildren();\n    // console.log(\"sortable kids\", ct.room.sortableChildren, pSprite.pSpeechBubble.zIndex)\n    \n    // {wordWrapWidth: 440}\n    // let ptext2 = addText(this, \"Meow2 \"+ct.room.element?.name, -100, 100);\n\n    var timer = ct.timer.add(msecs, 'test');\n    let promise = timer.then(() => {\n        console.log(\"done \"+text);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\nlet lastMove = new Date().getTime() - 2000;\n\nfunction moveRoom(roomName, options, moveOptions) {\n    if (ct.room.name === roomName) { // paranoia\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = Object.entries(options || {}).find(e => {\n            console.log(\"mod?\", e[1], ro[e[0]]);    \n            return e[1] !== ro[e[0]];\n        });\n        console.log(\"mod\", mod);\n        if ( ! mod) {\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n    }\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    lastMove = new Date().getTime();\n    // stash player x/y\n    let player = getPlayer();\n    if (player) {\n        if ( ! options) options = {};\n        options.playerx = player.x;\n        options.playery = player.y;\n    }\n    const moveRoom2 = () => {\n        // // close modal?\n        // if (UI.modal) {\n        //     ct.rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        ct.rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            roomOptions[roomName] = Object.assign(roomOptions[roomName], options);\n        }\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    ct.transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(ct.room, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction remove(array, item) {\n    assert(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    assert(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};"
+    code: "\nlet seed = Math.floor(Math.random()*1000);\n\nconst random = ct.random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return random() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(random()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nUI = {};\n\nfunction assert(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return ct.templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    assert( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        assert(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = ct.templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.x = ct.room.width / 3;\n    pTextBlock.width = ct.room.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    ct.timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (this.pTooltip) {\n        if (this.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    this.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if (this.pTooltip) {\n        this.pTooltip.destroy();\n        this.pTooltip = null;\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    assert(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = ct.styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    assert(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n/**\n * @param {PIXI.Sprite} pSprite\n * @param {Chat|string} chat\n */\nfunction doTalk(pSprite, chat) {\n    if (typeof(chat)===\"string\") {\n        chat = new Chat(chat); // convert\n    }\n    // chain async calls to step through the text\n    const control = {};\n    let p = null;\n    chat.lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    // talking promise\n    p = p.then(() => { \n        pSprite.talking = null; \n        console.log(\"null talking\",pSprite.pSpeechBubble);\n    });\n    assert(p);\n    pSprite.talking = p;\n    return p;\n}\n\nasync function doTalk2(pSprite, chatLine, control) {\n    const text = chatLine.text;\n    assert(text, chatLine);\n    if (control.stop) {\n        console.log(\"stop talking\", chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }\n    // let leafRoom = ct.room.children.filter(kid => {\n    //     console.warn(typeof(kid),kid);\n    //     return false;\n    // });\n    pSprite.pSpeechBubble = ct.templates.copyIntoRoom(\"speech-bubble\", pSprite.x-20, pSprite.y - pSprite.height, ct.room);\n    // pSprite.pSpeechBubble.depth = -1000;\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    // console.log(\"scale\",scale,text.length);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth});\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n\n    var timer = ct.timer.add(msecs, 'test');\n    let promise = timer.then(() => {\n        chatLine.done = true;\n        console.log(\"done \"+text, chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\nlet lastMove = new Date().getTime() - 2000;\nlet moving = false;\n\n/**\n  HACK: set playerx, playery for the room you are _leaving_\n * @param {!string} roomName * no-op if already in the room AND options arent modified\n * @param {?Object} options update state for roomName\n * @param {?Object} moveOptions {transition:none|??}\n */\nfunction moveRoom(roomName, options, moveOptions) {\n    console.error(\"moveRoom\",roomName, options,moveOptions); // for debug\n    if (moving) return; // no overlaps\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    if (ct.room.name === roomName) { // paranoia\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = options && Object.entries(options).find(([k,v]) => ro[k] !== v);\n        if ( ! mod) {\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n        console.log(\"moveRoom\",roomName, \"mod\",mod);\n    }\n    // anti-flicker\n    lastMove = new Date().getTime();\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // stash player x/y on the leaving room\n    let player = getPlayer();\n    if (player) {\n        let leaveState = {playerx: player.x, playery: player.y};\n        updateRoomState(ct.room.name, leaveState);\n    }\n    const moveRoom2 = () => {\n        moving = false;\n        // // close modal?\n        // if (UI.modal) {\n        //     ct.rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        ct.rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            updateRoomState(roomName, options);\n        }\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    moving = true;\n    ct.transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(ct.room, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction remove(array, item) {\n    assert(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    assert(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};\n\n/**\n * Fix bug (dec 2023) where scale is ignored\n */\nfunction getBounds(pSprite) {\n    if ( ! pSprite.shape) {\n        console.log(\"no shape\",pSprite);\n        return pSprite.getBounds();\n    }\n\tlet h = pSprite.height;\n\tlet w = pSprite.width;\n\tlet {left,right,top,bottom, type, r} = pSprite.shape;\n\t// scale\n\tif (pSprite.scale.y) {\n\t\ttop *= pSprite.scale.y;\n\t\tbottom *= pSprite.scale.y;\n\t\tr *= pSprite.scale.y;\n\t}\n\tif (pSprite.scale.x) {\n\t\tleft *= pSprite.scale.x;\n\t\tright *= pSprite.scale.x;\n\t}\n\tlet b1;\n\tif (type===\"circle\") {\n\t\tb1 = {\n\t\t\tx: pSprite.x - r, \n\t\t\ty: pSprite.y - r,\n\t\t\twidth: 2*r, \n\t\t\theight: 2*r\n\t\t};\n\t} else {\n\t\tb1 = {\n\t\t\tx: pSprite.x - left, \n\t\t\ty: pSprite.y - top,\n\t\t\twidth: right - left, //;left - right, \n\t\t\theight: top - bottom\n\t\t};\n\t}\n\tassert(b1.height >= -0.1, b1); // allow maths precision\n\tassert(b1.width >= -0.1, b1);\n    // console.log(\"boundsshape\",pSprite);\n    return b1;\n}\n\n\nlet pg1, pg2;\n/**\n * @returns {boolean} box collision test\n */\nfunction testBoxCollision(bounds1, bounds2)\n{\n    console.log(\"testBoxCollision\",bounds1, bounds2);\n    let hit = bounds1.x < bounds2.x + bounds2.width\n        && bounds1.x + bounds1.width > bounds2.x\n        && bounds1.y < bounds2.y + bounds2.height\n        && bounds1.y + bounds1.height > bounds2.y;\n        // debug\n    // if ( ! this.pg1) {\n    //     let pg1 = new PIXI.Graphics();\n    //     this.pg1 = pg1;\n    //     ct.room.addChild(this.pg1);            \n    //     let pg2 = new PIXI.Graphics();\n    //     this.pg2 = pg2;\n    //     ct.room.addChild(this.pg2);            \n    // }\n    // this.pg1.clear();\n    // this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);\n    // this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);\n    // this.pg1.beginFill(0xCCFFCC,1);\n    // this.pg1.drawCircle(bounds1.x, bounds1.y, 3);\n\n    // this.pg2.clear();\n    // this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);\n    // this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);\n    // this.pg2.beginFill(0xCCCCFF,1);\n    // this.pg2.drawCircle(bounds2.x, bounds2.y, 3);\n\n    return hit;\n}\n"
   - name: element-info
-    code: |+
+    code: |-
 
       const periodicTable = [
           ["H", "", "", "", "", "","","","","","","","","","","","","","He"],
@@ -9940,8 +10102,8 @@ scripts:
               "block": "p-block",
               "group": "group 17: halogens",
               "electron_configuration": "1s^2 2s^2 2p^5",
-              "interesting_fact": "Fluorine is the most electronegative and reactive of all elements, making it capable of forming compounds with almost all other elements.",
-              "historical_story": "Fluorine was first isolated by Henri Moissan in 1886, and its extreme reactivity and difficulty in handling made its early study and isolation a challenging task."
+              "interesting_fact": "Fluorine is the most reactive of all elements, desperate to fill the missing 10th electron in it's electron shell, and capable of forming compounds with almost all other elements.",
+              "historical_story": "Fluorine is difficult and dangerous to handle, and several early chemists were injured or killed studying it."
           },
           "Ne": {
               "name": "Neon",
@@ -10332,32 +10494,264 @@ scripts:
               "electron_configuration": "1s^2 2s^2 2p^6 3s^2 3p^6 3d^10 4s^2 4p^6 5s^2 4d^1",
               "interesting_fact": "Yttrium is used in the production of phosphors, which are important for making the red color in television tubes and LED screens.",
               "historical_story": "Yttrium was discovered in 1794 by Johan Gadolin, who detected it in the mineral ytterbite (later renamed gadolinite) from Ytterby, Sweden."
+          },
+          "Zr": {
+              "name": "Zirconium",
+              "symbol": "Zr",
+              "standard_conditions_state": "solid",
+              "appearance": "silvery white",
+              "atomic_number": 40,
+              "atomic_weight": 91.224,
+              "block": "d-block",
+              "group": "group 4",
+              "electron_configuration": "[Kr] 4d^2 5s^2",
+              "interesting_fact": "Zirconium is widely used in nuclear reactors due to its low neutron-capture cross-section.",
+              "historical_story": "Zirconium was discovered in 1789 by Martin Heinrich Klaproth, who found it in a sample of zircon."
+          },
+          "Nb": {
+              "name": "Niobium",
+              "symbol": "Nb",
+              "standard_conditions_state": "solid",
+              "appearance": "gray metallic",
+              "atomic_number": 41,
+              "atomic_weight": 92.90637,
+              "block": "d-block",
+              "group": "group 5",
+              "electron_configuration": "[Kr] 4d^4 5s^1",
+              "interesting_fact": "Niobium is used in superconducting magnets and alloys, such as those used in medical imaging.",
+              "historical_story": "Niobium was discovered in 1801 by Charles Hatchett in a mineral called columbite."
+          },
+          "Mo": {
+              "name": "Molybdenum",
+              "symbol": "Mo",
+              "standard_conditions_state": "solid",
+              "appearance": "gray metallic",
+              "atomic_number": 42,
+              "atomic_weight": 95.95,
+              "block": "d-block",
+              "group": "group 6",
+              "electron_configuration": "[Kr] 4d^5 5s^1",
+              "interesting_fact": "Molybdenum is essential for life, being found in several enzymes in organisms.",
+              "historical_story": "Molybdenum was discovered in 1778 by Carl Wilhelm Scheele, who thought it was a new element, but it was later isolated by Peter Jacob Hjelm in 1781."
+          },
+          "Tc": {
+              "name": "Technetium",
+              "symbol": "Tc",
+              "standard_conditions_state": "solid",
+              "appearance": "silvery gray metallic",
+              "atomic_number": 43,
+              "atomic_weight": [98],
+              "block": "d-block",
+              "group": "group 7",
+              "electron_configuration": "[Kr] 4d^5 5s^2",
+              "interesting_fact": "Technetium was the first element to be artificially produced, and all its isotopes are radioactive.",
+              "historical_story": "Technetium was artificially created in 1937 by Carlo Perrier and Emilio Segrè by bombarding molybdenum atoms with deuterons."
+          },
+          "Ru": {
+              "name": "Ruthenium",
+              "symbol": "Ru",
+              "standard_conditions_state": "solid",
+              "appearance": "silvery white metallic",
+              "atomic_number": 44,
+              "atomic_weight": 101.07,
+              "block": "d-block",
+              "group": "group 8",
+              "electron_configuration": "[Kr] 4d^7 5s^1",
+              "interesting_fact": "Ruthenium is often used in wear-resistant electrical contacts and thick-film resistors.",
+              "historical_story": "Ruthenium was discovered in 1844 by Karl Ernst Claus at Kazan State University, Russia, while examining platinum ore."
+          },
+          "Rh": {
+              "name": "Rhodium",
+              "symbol": "Rh",
+              "standard_conditions_state": "solid",
+              "appearance": "silvery white metallic",
+              "atomic_number": 45,
+              "atomic_weight": 102.90550,
+              "block": "d-block",
+              "group": "group 9",
+              "electron_configuration": "[Kr] 4d^8 5s^1",
+              "interesting_fact": "Rhodium is one of the rarest and most valuable precious metals.",
+              "historical_story": "Rhodium was discovered in 1803 by William Hyde Wollaston in England, shortly after his discovery of palladium."
+          },
+          "Pd": {
+              "name": "Palladium",
+              "symbol": "Pd",
+              "standard_conditions_state": "solid",
+              "appearance": "silvery white metallic",
+              "atomic_number": 46,
+              "atomic_weight": 106.42,
+              "block": "d-block",
+              "group": "group 10",
+              "electron_configuration": "[Kr] 4d^10",
+              "interesting_fact": "Palladium is a key component in fuel cells, which react hydrogen with oxygen to produce electricity, water, and heat.",
+              "historical_story": "Palladium was discovered in 1803 by William Hyde Wollaston, who named it after the asteroid Pallas."
+          },
+          "Ag": {
+              "name": "Silver",
+              "symbol": "Ag",
+              "standard_conditions_state": "solid",
+              "appearance": "lustrous white metal",
+              "atomic_number": 47,
+              "atomic_weight": 107.8682,
+              "block": "d-block",
+              "group": "group 11",
+              "electron_configuration": "[Kr] 4d^10 5s^1",
+              "interesting_fact": "Silver has the highest electrical conductivity of any element and the highest thermal conductivity of any metal.",
+              "historical_story": "Silver has been known since ancient times, being one of the seven metals of antiquity, and its discovery date is unknown."
+          },
+          "Cd": {
+              "name": "Cadmium",
+              "symbol": "Cd",
+              "standard_conditions_state": "solid",
+              "appearance": "silvery bluish-gray metallic",
+              "atomic_number": 48,
+              "atomic_weight": 112.414,
+              "block": "d-block",
+              "group": "group 12",
+              "electron_configuration": "[Kr] 4d^10 5s^2",
+              "interesting_fact": "Cadmium is used in nickel-cadmium rechargeable batteries and for corrosion resistant plating on steel.",
+              "historical_story": "Cadmium was discovered in Germany in 1817 by Friedrich Stromeyer and Karl Samuel Leberecht Hermann, as an impurity in zinc carbonate."
+          },
+          "In": {
+              "name": "Indium",
+              "symbol": "In",
+              "standard_conditions_state": "solid",
+              "appearance": "silvery lustrous gray",
+              "atomic_number": 49,
+              "atomic_weight": 114.818,
+              "block": "p-block",
+              "group": "group 13",
+              "electron_configuration": "[Kr] 4d^10 5s^2 5p^1",
+              "interesting_fact": "Indium is used in the making of touchscreens and flat panel displays, particularly in liquid crystal displays (LCDs).",
+              "historical_story": "Indium was discovered in 1863 by Ferdinand Reich and Hieronymous Theodor Richter while they were testing zinc ores for thallium."
+          },
+          "Sn": {
+              "name": "Tin",
+              "symbol": "Sn",
+              "standard_conditions_state": "solid",
+              "appearance": "silvery-white, often with a bluish tinge",
+              "atomic_number": 50,
+              "atomic_weight": 118.710,
+              "block": "p-block",
+              "group": "group 14",
+              "electron_configuration": "[Kr] 4d^10 5s^2 5p^2",
+              "interesting_fact": "Tin has been used since ancient times and was a major component in the alloy bronze, used to advance human technology in the Bronze Age.",
+              "historical_story": "Tin has been known since ancient times and was used as early as 3000 BC in the Middle East and the Balkans."
+          },
+          "Sb": {
+              "name": "Antimony",
+              "symbol": "Sb",
+              "standard_conditions_state": "solid",
+              "appearance": "silvery, lustrous gray",
+              "atomic_number": 51,
+              "atomic_weight": 121.760,
+              "block": "p-block",
+              "group": "group 15",
+              "electron_configuration": "[Kr] 4d^10 5s^2 5p^3",
+              "interesting_fact": "Antimony compounds have been used for centuries for cosmetics; the ancient Egyptians used antimony sulfide as mascara.",
+              "historical_story": "Antimony was recognized in compounds by the ancients and was known as a metal at the beginning of the 17th century."
+          },
+
+
+
+          // gap
+
+
+
+          "Lv": {
+              "name": "Livermorium",
+              "symbol": "Lv",
+              "standard_conditions_state": "unknown, probably solid",
+              "appearance": "unknown, probably metallic",
+              "atomic_number": 116,
+              "atomic_weight": [293],
+              "block": "p-block",
+              "group": "group 16",
+              "electron_configuration": "predicted: [Rn] 5f^14 6d^10 7s^2 7p^4",
+              "interesting_fact": "Livermorium is named after the Lawrence Livermore National Laboratory in the United States.",
+              "historical_story": "Livermorium was first synthesized in 2000 by a joint team of Russian and American scientists at the Joint Institute for Nuclear Research in Dubna, Russia."
+          },
+          "Ts": {
+              "name": "Tennessine",
+              "symbol": "Ts",
+              "standard_conditions_state": "unknown, probably solid",
+              "appearance": "unknown",
+              "atomic_number": 117,
+              "atomic_weight": [294],
+              "block": "p-block",
+              "group": "group 17",
+              "electron_configuration": "predicted: [Rn] 5f^14 6d^10 7s^2 7p^5",
+              "interesting_fact": "Tennessine is one of the heaviest elements and is named after the U.S. state of Tennessee.",
+              "historical_story": "Tennessine was synthesized for the first time in 2010 by a collaboration involving Russian, American, and other researchers."
+          },
+          "Og": {
+              "name": "Oganesson",
+              "symbol": "Og",
+              "standard_conditions_state": "unknown, predicted to be gaseous",
+              "appearance": "unknown",
+              "atomic_number": 118,
+              "atomic_weight": [294],
+              "block": "p-block",
+              "group": "group 18",
+              "electron_configuration": "predicted: [Rn] 5f^14 6d^10 7s^2 7p^6",
+              "interesting_fact": "Oganesson is the heaviest element in the periodic table and is named after Russian physicist Yuri Oganessian.",
+              "historical_story": "Oganesson was first synthesized in 2002 by a joint team of Russian and American scientists at the Joint Institute for Nuclear Research in Dubna, Russia."
           }
       };
 
+      const size4shell = {};
+
+      Object.values(info4symbol).forEach(info => {
+          let ec = info.electron_configuration;
+          let bits = ec.split(" ");
+          bits.forEach(bit => {
+              let shell_n = bit.split("^");
+              if (shell_n.length !== 2) return;
+              let s = shell_n[0];
+              let m = new Number(shell_n[1]);
+              if (size4shell[s]) m = Math.max(size4shell[s], m);
+              size4shell[s] = m;
+          });
+      });
   - name: state_and_score
     code: |
 
       // HACK jump to test focus
       let startSymbol = "He";
       let startPlatform = 6;
-      let startRoom = "Room_Platformer";
+      let startRoom 
+          // = "Room_Platformer";
+          = null;
+      // setTimeout(() => {
+      //     addCanister("He");
+      // },100);
 
 
       /**
        * roomName: {symbol, etc}
        */
-      let roomOptions = {};
+      const roomOptions = {};
+      window.roomOptions = roomOptions;
 
       /**
        * Set properties of the room state. This merges over existing properties.
+       * @returns new state, with a modified flag
        */
       function updateRoomState(roomName, state) {
           let rState = roomOptions[roomName];
           if ( ! rState) {
               roomOptions[roomName] = rState = {};
           }
-          Object.assign(rState, state);
+          if ( ! state) return; // odd
+          let mod = false;
+          Object.entries(state).forEach(e => {
+              // console.log("mod?", e[1], ro[e[0]]);    
+              if (e[1] === rState[e[0]]) return; // no-op
+              rState[e[0]] = e[1];
+              mod = true;
+          });
+          rState.modified = mod;
+          // Object.assign(rState, state);
           return rState;
       }
 
@@ -10425,7 +10819,9 @@ scripts:
           counters.elements += 1;
       }
 
-      function isUnlocked(symbol1, symbol2) {    
+      function isUnlocked(symbol1, symbol2) {
+          if ( ! symbol2) return unlocked[symbol1];
+          // either way round    
           return unlocked[symbol1+"-"+symbol2] || unlocked[symbol2+"-"+symbol1]
       }
 
@@ -10526,30 +10922,56 @@ scripts:
   - name: chats
     code: >-
 
+      class ChatLine {
+          /** @types {String} */
+          text;
+
+          /** @types {boolean} What has been said to the player? */
+          done;
+
+          constructor(text) {
+              this.text = text;
+          }
+      }
+
+      class Chat {
+          /** @types {ChatLine[]}  */
+          lines;
+
+          constructor(text) {
+              let texts = text.split(/\n[ \t]*\n[ \t]*/);
+              this.lines = texts.map(line => new ChatLine(line));
+          }
+      }
+
+
       let chat4symbol = {
           He: 
-      `You should probably find and fix the Oxygen room so we can all keep
-      breathing.
+      new Chat(`You should probably find and fix the Oxygen room so we can all
+      keep breathing.
 
 
       I would help you, but I'm a cat, and it's not in my nature.
 
 
-      Opening the manhole there will help, if you can figure out how.`,
+      Opening the manhole there will help, if you can figure out how.`),
 
 
       Ne: 
 
-      `I'm not supposed to be helpful, but I actualy quite like you.
+      new Chat(`I'm not supposed to be helpful, but I actualy quite like you.
 
 
-      Oxygen is 2 rooms to the left of neon, where we are now.`,
+      Oxygen is 2 rooms to the left of neon, where we are now.`),
 
 
-      F:``,
+      F:new Chat(`Beware of flourine! 
 
 
-      O:``,
+      Just one electron less than neon, but what a difference that makes.`),
+
+
+      O:new Chat(``),
 
 
       };
