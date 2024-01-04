@@ -2462,6 +2462,36 @@ textures:
     isBlank: false
     group: !<tag:yaml.org,2002:js/undefined> ''
     source: /home/daniel/ct.js/img/green-button.png
+  - lastmod: 1704315773854
+    type: texture
+    name: wall
+    untill: 0
+    grid:
+      - 1
+      - 1
+    axis:
+      - 0
+      - 0
+    marginx: 0
+    marginy: 0
+    imgWidth: 33
+    imgHeight: 377
+    width: 33
+    height: 377
+    offx: 0
+    offy: 0
+    origname: iQjqTqjwLKh13wL.png
+    shape: rect
+    left: 0
+    right: 33
+    top: 0
+    bottom: 377
+    uid: QjqTqjwLKh13wL
+    padding: 1
+    isBlank: false
+    group: !<tag:yaml.org,2002:js/undefined> ''
+    source: /home/daniel/winterwell/ctjs/img/wall.png
+    tiled: true
 skeletons: []
 templates:
   - type: template
@@ -2894,7 +2924,7 @@ templates:
         lib: place
     extends:
       cgroup: ''
-    lastmod: 1704237842055
+    lastmod: 1704317787701
     uid: CfLHnnjb3G8L59
   - type: template
     name: Block
@@ -3275,7 +3305,7 @@ templates:
           // add as layer??
           function switchToPuzzle() {
               console.log("switchToPuzzle");
-              let puzzleRoomName = "Room_Puzzle_Pipes_dup";
+              let puzzleRoomName = "Room_Puzzle_Pipes";
               moveRoom(puzzleRoomName, {symbol}, {});    
           }
 
@@ -3318,7 +3348,7 @@ templates:
         lib: core
     extends:
       cgroup: interact
-    lastmod: 1704237907280
+    lastmod: 1704317809199
     uid: TQtRCB1Lb457JW
   - type: template
     name: tank-1
@@ -4401,6 +4431,19 @@ templates:
     extends: {}
     lastmod: 1704228537262
     uid: BBmcG1pcrBDgKb
+  - type: template
+    name: wall
+    depth: 0
+    texture: QjqTqjwLKh13wL
+    playAnimationOnStart: false
+    loopAnimation: true
+    animationFPS: 30
+    visible: true
+    events: []
+    extends:
+      cgroup: Solid
+    lastmod: 1704315781951
+    uid: cqqdNgkBk88ckw
 sounds:
   - name: Wood_Start
     uid: 42e768ce-6c19-4c34-9f14-11e257ecff18
@@ -4793,6 +4836,12 @@ rooms:
           bg.parallaxY = 0.1;  
 
           console.log("picked bg",bg);
+
+
+          // Blank edges
+
+          console.warn("TODO black box for edge of world");
+
 
 
           // add UI
@@ -5349,10 +5398,10 @@ rooms:
         customProperties: {}
     tiles: []
     extends: {}
-    lastmod: 1704238661275
+    lastmod: 1704317938463
     events:
       - eventKey: OnRoomStart
-        code: "\n\nthis.puzzleType = \"flow\";\nthis.elementSymbol = roomOptions[this.name].symbol;\nassert(this.elementSymbol);\nthis.element = info4symbol[this.elementSymbol]\n\n// get harder\nthis.puzzleSize = Math.min(Math.max(10, this.element.atomic_number / 5), 5);\n\nconsole.log(\"room\", this, \"roomOptions\", JSON.stringify(roomOptions), \"element\", this.element);\n\nUI.modal = this;\n\nct.rooms.append('Room_UI');\n\nconst BLANK_TEXTURE = \"pipe-empty\";\nconst EW_TEXTURE = \"pipe-bit-1\";\nconst NW_TEXTURE = \"pipe-corner-NW\";\nconst SW_TEXTURE = \"pipe-corner-SW\";\n\n// container\nthis.sortableChildren = true;\nlet pContainer = getTemplates(this,\"PlumbingContainer\")[0];\npContainer.zIndex = 100;\n// NB: x/y adjustment numbers found by random tweaking :'(\nlet sqWidth = Math.floor((pContainer.width - 150) / this.puzzleSize);\nlet offsetX = (pContainer.width - sqWidth*this.puzzleSize)/2 + 15; \nlet offsetY = 20 + 32; \n\n// Text\nlet textBlock = getTemplates(this, \"TextBlock\")[0];\nlet info = info4symbol[this.elementSymbol];\naddText(textBlock, info.atomic_number+\": \"+info.name+\" (\"+info.symbol+\")\\n\"\n    +\"At room temperature: \"+info.standard_conditions_state+\"\\n\"\n    +\"Normal appearance: \"+info.appearance+\"\\n\"\n    +info.interesting_fact\n    // +JSON.stringify(info)\n    , 10, 10, {wordWrap:true, wordWrapWidth: textBlock.width - 20});\n\n// TODO seeds\n\n/**\n * @returns {Pipe[]}\n */\nfunction makePipes({w=8}) {\n    let pipes = [];\n    for(let i=0; i<w; i++) {\n        let pipe = new Pipe();\n        pipes.push(pipe);\n        pipe.col = Object.keys(colour)[i];\n        for(let j=0; j<w; j++) {\t\t\t\t\n            pipe.xys.push([i, j]);\n        }\n    }\n\n    // mutate - move a pair of pipe ends\n    for(let i=0; i<1000000; i++) {\n        let pipe1 = getRandomMember(pipes);\n        let pipe2 = getRandomMember(pipes);\n        if (pipe1==pipe2) continue;\n        let ai = getRandomChoice(0.5)? 0 : pipe1.xys.length - 1;\n        let bi = getRandomChoice(0.5)? 0 : pipe2.xys.length - 1;\n        let a0 = pipe1.xys[ai];\n        let b0 = pipe2.xys[bi];\n        if (isTouching(a0, b0)) {\n            // move one end\n            if (getRandomChoice(0.5)) {\n                movePipe(pipe1,ai,pipe2,bi);\n            } else {\n                movePipe(pipe2,bi,pipe1,ai);\n            }\n        }\n    }\t\n    return pipes;\t\n} // ./ makePipes\n\nfunction movePipe(pipe1,  ai,  pipe2,  bi) {\n    if (pipe1.xys.length < 4) return;\n    let s = pipe1.xys[ai];\n    // avoid looping back:\n    if (isLoopBack(s, pipe2, pipe2.xys[bi])) {\n        return;\n    } else {\n        pipe1.xys = pipe1.xys.filter(xy => xy !== s);\n        if (bi==0) pipe2.xys.splice(bi, 0, s);\n        else pipe2.xys.push(s);\n    }\n}\n\nfunction isLoopBack(s, pipe2, b0) {\n    for (let i = 0; i < pipe2.xys.length; i++) {\n        let b = pipe2.xys[i];\n        if (b===b0) continue;\n        if (isTouching(s,b)) return true;\n    }\n    return false;\n}\n\nthis.pipes = makePipes({w:this.puzzleSize});\n\nconsole.log(this.pipes);\n\n// render\nthis.grid = [];\nfor(let i=0; i<this.puzzleSize; i++) this.grid.push([]);\nthis.pipes.forEach(pipe => {\n    let start = pipe.xys[0];\n    let end = pipe.xys[pipe.xys.length-1];\n    // pipe.xys.forEach(xy => {\n    [start, end].forEach(xy => {\n        let pb = new PipeBit();\n        pb.col = pipe.col;\n        pb.isEnd = true;\n        this.grid[xy[0]][xy[1]] = pb;\n    });\n});\n// console.log(\"grid\", this.grid);\n\nlet modal = ct.templates.list['modal'].find(m => m.getRoom() === this);\n\n\n// draw grid\nlet pGridLines = new PIXI.Graphics();\npGridLines.lineStyle(3, 0xcccccc, 0.5, 0.5, true);\nlet h = 38; // adjust for half-brick centering in tile bits\nlet endX = offsetX + this.puzzleSize * sqWidth - h;\nlet endY = offsetY + this.puzzleSize * sqWidth - h;\nfor(let col=0; col < this.grid.length + 1; col++) {\n    pGridLines.moveTo(offsetX-35, offsetY - 38 + sqWidth*col);\n    pGridLines.lineTo(endX, offsetY - 38 + sqWidth*col);\n}\nfor(let row=0; row < this.grid.length + 1; row++) {\n    pGridLines.moveTo(offsetX-38 +sqWidth*row, offsetY-38);\n    pGridLines.lineTo(offsetX-38 +sqWidth*row, endY);\n}\npContainer.addChild(pGridLines);\n\n// grid to tile-grid\nfor(let i=0; i<this.grid.length; i++) {\n    for(let j=0; j<this.grid.length; j++) { // NB: assume square\n        // console.log(\"grid i j\", i, j, this.grid[i][j], this.grid[i][j]?.col);\n        let copy = ct.templates.copy(\"empty-tile\");\n        copy.zIndex = 100;\n        copy.pipeColor = this.grid[i][j]?.col;\n        // let obj = new PIXI.Graphics();\n        copy.gridx = j;\n        copy.gridy = i;\n        copy.x = offsetX + sqWidth*j;\n        copy.y = offsetY + sqWidth*i;\n\n        if (copy.pipeColor) {\n            copy.isEnd = true;\n            copy.tex = \"pipe-end-block\";\n            const col = colour[copy.pipeColor];\n            copy.tint = col;\n            // obj.beginFill(colour[copy.pipeColor]);\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);            \n        } else {        \n            copy.tex = BLANK_TEXTURE; //\"pipe-bit-1\";\n            // obj.beginFill(0); // not clickabale otherwise??\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);\n            // obj.lineStyle(1, colour[\"grey\"]);\n            // obj.moveTo(1,1);\n            // obj.lineTo(1, sqWidth-2);\n            // obj.lineTo(sqWidth-2, sqWidth-2);\n            // obj.lineTo(sqWidth-2, 1);\n            // obj.lineTo(1, 1);\n        }        \n        copy.width  = sqWidth;\n        copy.height = sqWidth;\n        // copy.height = sqWidth;\n\n        // copy.addChild(obj);\n        pContainer.addChild(copy);\n    }\n}\n\nthis.pipeColourMarker = getTemplates(this, \"PipeColorMarker\")[0];\nassert(this.pipeColourMarker);\n// this.pipeColourMarker = new PIXI.Graphics();\n// this.pipeColourMarker.beginFill(colour[0]);\n// let r = sqWidth / 2;\n// this.pipeColourMarker.drawCircle(r,r,r);\n\n// this.pipeColourMarker.x = offsetX + (sqWidth+2) * this.puzzleSize;\n// this.pipeColourMarker.y = offsetY;\n// modal.addChild(this.pipeColourMarker);\n\nfunction setColor(color, room) {\n    assert(room, \"no room\",color);\n    // select\n    room.selectedColor = color;\n    room.downColor = color;\n    console.log(\"col\",color);\n    const col = colour[color];\n    room.pipeColourMarker.tint = col;\n    // room.pipeColourMarker.beginFill(colour[color]);\n    // let r = sqWidth / 2;\n    // room.pipeColourMarker.drawCircle(r,r,r);\n}\nthis.setPipeColor = setColor;\n\nthis.onTileClick = (This) => {\n    console.log(\"click\",This);\n    let room = This.getRoom();\n    if (This.isEnd) {\n        setColor(This.pipeColor, room);\n    } else {\n        room.doFillTile(This, room.selectedColor);\n    }\n};\n\n\nthis.doFillTile = function(This, color) {\n    console.log(\"bar\");\n    assert(This);\n    let room = This.getRoom();\n    assert(room, This);\n    if (This.isEnd) {\n        if (color===This.pipeColor) {\n            setColor(null, room);\n        } else {\n            setColor(This.pipeColor, room);\n        }\n        return;\n    }\n    This.tex = EW_TEXTURE;\n    This.pipeColor = color;\n    const col = colour[This.pipeColor];\n    This.tint = col; \n    let pb = new PipeBit();\n    pb.col = This.pipeColor;\n    pb.pTile = This;\n    room.grid[This.gridy][This.gridx] = pb;\n    // adjust graphics\n    setPipeTexture(This, room);\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid); // TODO\n    gn.forEach(nxy => {\n        let pTile = getGridEntry(room.grid, nxy)?.pTile;\n        if (pTile) setPipeTexture(pTile, room);\n    });\n    // Win?\n    let win = checkWin(room.grid, room.pipes);\n    if (win) {\n        doWin(room);\n    }\n};\n\n\nfunction setPipeTexture(This, room) {\n    console.log(\"setPipeTexture\",This);\n    assert( ! This.isEnd);\n    let col = This.pipeColor;\n    if ( ! col) {\n        This.tex = BLANK_TEXTURE;\n        return;\n    }\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid);\n    console.log(\"setPipeTexture xy\",xy,\"gn\",gn);\n    let sameColor = gn.filter(nxy => {\n        // console.log(\"setPipeTexture xy\",xy,\"gn\",gn,\"grid row\",room.grid[nxy[1]]);\n        let row = room.grid[nxy[1]];\n        if ( ! row) {\n            // console.warn(\"no row in grid\",nxy,room.grid);\n            return false;\n        }\n        let npb = row[nxy[0]];\n        return npb?.col === col;\n    });\n    console.log(\"TODO which pipe texture? sameColor\",sameColor,\"xy\", xy, This, room)\n    let n = contains([xy[0],xy[1]-1], sameColor);\n    let s = contains([xy[0],xy[1]+1], sameColor);\n    let e = contains([xy[0]+1,xy[1]], sameColor);\n    let w = contains([xy[0]-1,xy[1]], sameColor);\n    console.log(\"what corner?\",\"n\",n,\"e\",e,\"s\",s,\"w\",w,\"xy\",xy);\n\n    if (n || s) {\n        if ( ! e && ! w) {\n            This.tex = EW_TEXTURE;\n            This.rotation = Math.PI / 2;\n            return;\n        }\n    } else if (e || w) {\n        This.tex = EW_TEXTURE;\n        This.rotation = 0; // reset\n        return;\n    } else {\n        This.tex = BLANK_TEXTURE;\n    }\n    // corner\n    This.rotation = 0; // reset\n    if (n && w) {\n        This.tex = NW_TEXTURE; \n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (s && w) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (n && e) {\n        This.tex = NW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    if (s && e) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    // error\n    This.tex = EW_TEXTURE;\n    console.error(\"what corner?\",n,e,s,w,xy);\n}\n\nfunction doWin(room) {\n    ct.sound.spawn(\"Success\");\n    room.win = true;\n    let x = room.pipeColourMarker.x;\n    let y = room.pipeColourMarker.y;\n    ct.emitters.append(room.pipeColourMarker, \"Tandem_Sparks\"); // fire(\"Tandem_Sparks\", x, y);\n    doUnlock(room.elementSymbol);\n    addCanister(room.elementSymbol);\n    // close\n    ct.sound.spawn(\"Sound_Squeaky_Open\", {volume:0.5}, () => {\n        moveRoom(\"Room_Platformer\");\n    });\n}\n\nfunction checkWin(grid, pipes) {\n    console.log(\"TODO checkWin\", grid, pipes);\n    for(let i=0; i<pipes.length; i++) {\n        if ( ! checkWin2_onePipe(grid, pipes[i])) return false;\n    }\n    return true;\n}\n\n/**\n * @param {PipeBit[][]} grid\n */\nfunction checkWin2_onePipe(grid, pipe) {\n    console.log(\"pipe\", pipe.col, pipe,\"grid\",grid);\n    let startXY = pipe.xys[0];\n    let endXY = pipe.xys[pipe.xys.length-1];\n    let path = [startXY];\n    let steps = 0;\n    while(steps < 20) {\n        steps++;\n        let tip = path[path.length-1];\n        let gn = getGridNeighbours(tip, grid);\n        console.log(\"path\", path, \"gn\",gn,\"tip\",tip);\n        let nextBits = gn.filter(xy => {\n            let g0 = grid[xy[0]];\n            if ( ! g0) return false;\n            let pb = g0[xy[1]];\n            console.log(\"nextBits check xy\", xy, \"pb\", pb, path);\n            return pb && pb.col === pipe.col && ! contains(xy, path);\n        }) ;  \n        console.log(path, \"nextBits\",nextBits, grid, pipe);\n        if ( ! nextBits.length) {\n            console.log(\"FAIL for \", pipe.col, path);\n            return false;\n        }\n        let nextBit = nextBits[0];\n        if (eq(nextBit, endXY)) {\n            console.log(\"WIN for \", pipe.col, path);\n            return true;\n        }\n        console.log(\"LOOP \", pipe.col, nextBit, \"path\",path,\"endXY\", endXY);\n        path.push(nextBit);\n    }\n    // let next = grid.\n    console.log(\"max steps for \", pipe.col, path);\n    return false; // TODO\n}\n\n/**\n * @returns {Array[]} [[x,y], ...]\n */\nfunction getGridNeighbours(xy, grid) {\n    let neighbours = [[1,0],[-1,0],[0,1],[0,-1]].map(dxdy => [xy[0]+dxdy[0], xy[1]+dxdy[1]]);\n    let filtered = neighbours.filter(cell => cell[0] > 0 && cell[1] > 0 && cell[0] < grid.length && cell[1] < grid[0].length);\n    console.log(\"neighbours\",xy,grid,\"filtered\", filtered);\n    return neighbours;\n}\n\nthis.sortChildren();"
+        code: "\n\nthis.puzzleType = \"flow\";\nthis.elementSymbol = roomOptions[this.name].symbol;\nassert(this.elementSymbol);\nthis.element = info4symbol[this.elementSymbol]\n\n// get harder\nthis.puzzleSize = Math.min(Math.max(10, this.element.atomic_number / 5), 5);\n\nconsole.log(\"room\", this, \"roomOptions\", JSON.stringify(roomOptions), \"element\", this.element);\n\nct.rooms.append('Room_UI');\n\nconst BLANK_TEXTURE = \"pipe-empty\";\nconst EW_TEXTURE = \"pipe-bit-1\";\nconst NW_TEXTURE = \"pipe-corner-NW\";\nconst SW_TEXTURE = \"pipe-corner-SW\";\n\n// container\nthis.sortableChildren = true;\nlet pContainer = getTemplates(this,\"PlumbingContainer\")[0];\npContainer.zIndex = 100;\n// NB: x/y adjustment numbers found by random tweaking :'(\nlet sqWidth = Math.floor((pContainer.width - 150) / this.puzzleSize);\nlet offsetX = (pContainer.width - sqWidth*this.puzzleSize)/2 + 15; \nlet offsetY = 20 + 32; \n\n// Text\nlet textBlock = getTemplates(this, \"TextBlock\")[0];\nlet info = info4symbol[this.elementSymbol];\naddText(textBlock, info.atomic_number+\": \"+info.name+\" (\"+info.symbol+\")\\n\"\n    +\"At room temperature: \"+info.standard_conditions_state+\"\\n\"\n    +\"Normal appearance: \"+info.appearance+\"\\n\"\n    +info.interesting_fact\n    // +JSON.stringify(info)\n    , 10, 10, {wordWrap:true, wordWrapWidth: textBlock.width - 20});\n\n// TODO seeds\n\n/**\n * @returns {Pipe[]}\n */\nfunction makePipes({w=8}) {\n    let pipes = [];\n    for(let i=0; i<w; i++) {\n        let pipe = new Pipe();\n        pipes.push(pipe);\n        pipe.col = Object.keys(colour)[i];\n        for(let j=0; j<w; j++) {\t\t\t\t\n            pipe.xys.push([i, j]);\n        }\n    }\n\n    // mutate - move a pair of pipe ends\n    for(let i=0; i<1000000; i++) {\n        let pipe1 = getRandomMember(pipes);\n        let pipe2 = getRandomMember(pipes);\n        if (pipe1==pipe2) continue;\n        let ai = getRandomChoice(0.5)? 0 : pipe1.xys.length - 1;\n        let bi = getRandomChoice(0.5)? 0 : pipe2.xys.length - 1;\n        let a0 = pipe1.xys[ai];\n        let b0 = pipe2.xys[bi];\n        if (isTouching(a0, b0)) {\n            // move one end\n            if (getRandomChoice(0.5)) {\n                movePipe(pipe1,ai,pipe2,bi);\n            } else {\n                movePipe(pipe2,bi,pipe1,ai);\n            }\n        }\n    }\t\n    return pipes;\t\n} // ./ makePipes\n\nfunction movePipe(pipe1,  ai,  pipe2,  bi) {\n    if (pipe1.xys.length < 4) return;\n    let s = pipe1.xys[ai];\n    // avoid looping back:\n    if (isLoopBack(s, pipe2, pipe2.xys[bi])) {\n        return;\n    } else {\n        pipe1.xys = pipe1.xys.filter(xy => xy !== s);\n        if (bi==0) pipe2.xys.splice(bi, 0, s);\n        else pipe2.xys.push(s);\n    }\n}\n\nfunction isLoopBack(s, pipe2, b0) {\n    for (let i = 0; i < pipe2.xys.length; i++) {\n        let b = pipe2.xys[i];\n        if (b===b0) continue;\n        if (isTouching(s,b)) return true;\n    }\n    return false;\n}\n\nthis.pipes = makePipes({w:this.puzzleSize});\n\nconsole.log(this.pipes);\n\n// render\nthis.grid = [];\nfor(let i=0; i<this.puzzleSize; i++) this.grid.push([]);\nthis.pipes.forEach(pipe => {\n    let start = pipe.xys[0];\n    let end = pipe.xys[pipe.xys.length-1];\n    // pipe.xys.forEach(xy => {\n    [start, end].forEach(xy => {\n        let pb = new PipeBit();\n        pb.col = pipe.col;\n        pb.isEnd = true;\n        this.grid[xy[0]][xy[1]] = pb;\n    });\n});\n// console.log(\"grid\", this.grid);\n\n// draw grid\nlet pGridLines = new PIXI.Graphics();\npGridLines.lineStyle(3, 0xcccccc, 0.5, 0.5, true);\nlet h = 38; // adjust for half-brick centering in tile bits\nlet endX = offsetX + this.puzzleSize * sqWidth - h;\nlet endY = offsetY + this.puzzleSize * sqWidth - h;\nfor(let col=0; col < this.grid.length + 1; col++) {\n    pGridLines.moveTo(offsetX-35, offsetY - 38 + sqWidth*col);\n    pGridLines.lineTo(endX, offsetY - 38 + sqWidth*col);\n}\nfor(let row=0; row < this.grid.length + 1; row++) {\n    pGridLines.moveTo(offsetX-38 +sqWidth*row, offsetY-38);\n    pGridLines.lineTo(offsetX-38 +sqWidth*row, endY);\n}\npContainer.addChild(pGridLines);\n\n// grid to tile-grid\nfor(let i=0; i<this.grid.length; i++) {\n    for(let j=0; j<this.grid.length; j++) { // NB: assume square\n        // console.log(\"grid i j\", i, j, this.grid[i][j], this.grid[i][j]?.col);\n        let copy = ct.templates.copy(\"empty-tile\");\n        copy.zIndex = 100;\n        copy.pipeColor = this.grid[i][j]?.col;\n        // let obj = new PIXI.Graphics();\n        copy.gridx = j;\n        copy.gridy = i;\n        copy.x = offsetX + sqWidth*j;\n        copy.y = offsetY + sqWidth*i;\n\n        if (copy.pipeColor) {\n            copy.isEnd = true;\n            copy.tex = \"pipe-end-block\";\n            const col = colour[copy.pipeColor];\n            copy.tint = col;\n            // obj.beginFill(colour[copy.pipeColor]);\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);            \n        } else {        \n            copy.tex = BLANK_TEXTURE; //\"pipe-bit-1\";\n            // obj.beginFill(0); // not clickabale otherwise??\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);\n            // obj.lineStyle(1, colour[\"grey\"]);\n            // obj.moveTo(1,1);\n            // obj.lineTo(1, sqWidth-2);\n            // obj.lineTo(sqWidth-2, sqWidth-2);\n            // obj.lineTo(sqWidth-2, 1);\n            // obj.lineTo(1, 1);\n        }        \n        copy.width  = sqWidth;\n        copy.height = sqWidth;\n        // copy.height = sqWidth;\n\n        // copy.addChild(obj);\n        pContainer.addChild(copy);\n    }\n}\n\nthis.pipeColourMarker = getTemplates(this, \"PipeColorMarker\")[0];\nassert(this.pipeColourMarker);\n\nfunction setColor(color, room) {\n    assert(room, \"no room\",color);\n    // select\n    room.selectedColor = color;\n    room.downColor = color;\n    console.log(\"col\",color);\n    const col = colour[color];\n    room.pipeColourMarker.tint = col;\n    // room.pipeColourMarker.beginFill(colour[color]);\n    // let r = sqWidth / 2;\n    // room.pipeColourMarker.drawCircle(r,r,r);\n}\nthis.setPipeColor = setColor;\n\nthis.onTileClick = (This) => {\n    console.log(\"click\",This);\n    let room = This.getRoom();\n    if (This.isEnd) {\n        setColor(This.pipeColor, room);\n    } else {\n        room.doFillTile(This, room.selectedColor);\n    }\n};\n\n\nthis.doFillTile = function(This, color) {\n    console.log(\"bar\");\n    assert(This);\n    let room = This.getRoom();\n    assert(room, This);\n    if (This.isEnd) {\n        if (color===This.pipeColor) {\n            setColor(null, room);\n        } else {\n            setColor(This.pipeColor, room);\n        }\n        return;\n    }\n    This.tex = EW_TEXTURE;\n    This.pipeColor = color;\n    const col = colour[This.pipeColor];\n    This.tint = col; \n    let pb = new PipeBit();\n    pb.col = This.pipeColor;\n    pb.pTile = This;\n    room.grid[This.gridy][This.gridx] = pb;\n    // adjust graphics\n    setPipeTexture(This, room);\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid); // TODO\n    gn.forEach(nxy => {\n        let pTile = getGridEntry(room.grid, nxy)?.pTile;\n        if (pTile) setPipeTexture(pTile, room);\n    });\n    // Win?\n    let win = checkWin(room.grid, room.pipes);\n    if (win) {\n        doWin(room);\n    }\n};\n\n\nfunction setPipeTexture(This, room) {\n    console.log(\"setPipeTexture\",This);\n    assert( ! This.isEnd);\n    let col = This.pipeColor;\n    if ( ! col) {\n        This.tex = BLANK_TEXTURE;\n        return;\n    }\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid);\n    console.log(\"setPipeTexture xy\",xy,\"gn\",gn);\n    let sameColor = gn.filter(nxy => {\n        // console.log(\"setPipeTexture xy\",xy,\"gn\",gn,\"grid row\",room.grid[nxy[1]]);\n        let row = room.grid[nxy[1]];\n        if ( ! row) {\n            // console.warn(\"no row in grid\",nxy,room.grid);\n            return false;\n        }\n        let npb = row[nxy[0]];\n        return npb?.col === col;\n    });\n    console.log(\"TODO which pipe texture? sameColor\",sameColor,\"xy\", xy, This, room)\n    let n = contains([xy[0],xy[1]-1], sameColor);\n    let s = contains([xy[0],xy[1]+1], sameColor);\n    let e = contains([xy[0]+1,xy[1]], sameColor);\n    let w = contains([xy[0]-1,xy[1]], sameColor);\n    console.log(\"what corner?\",\"n\",n,\"e\",e,\"s\",s,\"w\",w,\"xy\",xy);\n\n    if (n || s) {\n        if ( ! e && ! w) {\n            This.tex = EW_TEXTURE;\n            This.rotation = Math.PI / 2;\n            return;\n        }\n    } else if (e || w) {\n        This.tex = EW_TEXTURE;\n        This.rotation = 0; // reset\n        return;\n    } else {\n        This.tex = BLANK_TEXTURE;\n    }\n    // corner\n    This.rotation = 0; // reset\n    if (n && w) {\n        This.tex = NW_TEXTURE; \n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (s && w) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (n && e) {\n        This.tex = NW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    if (s && e) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    // error\n    This.tex = EW_TEXTURE;\n    console.error(\"what corner?\",n,e,s,w,xy);\n}\n\nfunction doWin(room) {\n    ct.sound.spawn(\"Success\");\n    room.win = true;\n    let x = room.pipeColourMarker.x;\n    let y = room.pipeColourMarker.y;\n    ct.emitters.append(room.pipeColourMarker, \"Tandem_Sparks\"); // fire(\"Tandem_Sparks\", x, y);\n    doUnlock(room.elementSymbol);\n    addCanister(room.elementSymbol);\n    // close\n    ct.sound.spawn(\"Sound_Squeaky_Open\", {volume:0.5}, () => {\n        moveRoom(\"Room_Platformer\");\n    });\n}\n\nfunction checkWin(grid, pipes) {\n    console.log(\"TODO checkWin\", grid, pipes);\n    for(let i=0; i<pipes.length; i++) {\n        if ( ! checkWin2_onePipe(grid, pipes[i])) return false;\n    }\n    return true;\n}\n\n/**\n * @param {PipeBit[][]} grid\n */\nfunction checkWin2_onePipe(grid, pipe) {\n    console.log(\"pipe\", pipe.col, pipe,\"grid\",grid);\n    let startXY = pipe.xys[0];\n    let endXY = pipe.xys[pipe.xys.length-1];\n    let path = [startXY];\n    let steps = 0;\n    while(steps < 20) {\n        steps++;\n        let tip = path[path.length-1];\n        let gn = getGridNeighbours(tip, grid);\n        console.log(\"path\", path, \"gn\",gn,\"tip\",tip);\n        let nextBits = gn.filter(xy => {\n            let g0 = grid[xy[0]];\n            if ( ! g0) return false;\n            let pb = g0[xy[1]];\n            console.log(\"nextBits check xy\", xy, \"pb\", pb, path);\n            return pb && pb.col === pipe.col && ! contains(xy, path);\n        }) ;  \n        console.log(path, \"nextBits\",nextBits, grid, pipe);\n        if ( ! nextBits.length) {\n            console.log(\"FAIL for \", pipe.col, path);\n            return false;\n        }\n        let nextBit = nextBits[0];\n        if (eq(nextBit, endXY)) {\n            console.log(\"WIN for \", pipe.col, path);\n            return true;\n        }\n        console.log(\"LOOP \", pipe.col, nextBit, \"path\",path,\"endXY\", endXY);\n        path.push(nextBit);\n    }\n    // let next = grid.\n    console.log(\"max steps for \", pipe.col, path);\n    return false; // TODO\n}\n\n/**\n * @returns {Array[]} [[x,y], ...]\n */\nfunction getGridNeighbours(xy, grid) {\n    let neighbours = [[1,0],[-1,0],[0,1],[0,-1]].map(dxdy => [xy[0]+dxdy[0], xy[1]+dxdy[1]]);\n    let filtered = neighbours.filter(cell => cell[0] > 0 && cell[1] > 0 && cell[0] < grid.length && cell[1] < grid[0].length);\n    console.log(\"neighbours\",xy,grid,\"filtered\", filtered);\n    return neighbours;\n}\n\nthis.sortChildren();"
         arguments: {}
         lib: core
       - eventKey: OnStep
@@ -7402,23 +7451,12 @@ rooms:
         uid: 1cRbbTTRzCHgjn
         exts: {}
         customProperties: {}
-      - x: -145
-        'y': 688
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1.42408377
-          'y': 1
-        rotation: 0
-        uid: 1cRbbTTRzCHgjn
-        exts: {}
-        customProperties: {}
       - x: 896
         'y': 288
         opacity: 1
         tint: 16777215
         scale:
-          x: 1.72251309
+          x: 1.6701570700000001
           'y': 0.91428571
         rotation: 0
         uid: 1cRbbTTRzCHgjn
@@ -7429,14 +7467,14 @@ rooms:
         opacity: 1
         tint: 16777215
         scale:
-          x: 1.18324607
-          'y': 0.94285714
+          x: 1.2
+          'y': 1
         rotation: 0
         uid: 1cRbbTTRzCHgjn
         exts: {}
         customProperties: {}
       - x: 128
-        'y': 688
+        'y': 690
         opacity: 1
         tint: 16777215
         scale:
@@ -7457,12 +7495,12 @@ rooms:
         uid: 1cRbbTTRzCHgjn
         exts: {}
         customProperties: {}
-      - x: 0
+      - x: -80
         'y': 288
         opacity: 1
         tint: 16777215
         scale:
-          x: 1
+          x: 1.3
           'y': 1
         rotation: 0
         uid: 1cRbbTTRzCHgjn
@@ -7528,8 +7566,8 @@ rooms:
         opacity: 1
         tint: 16777215
         scale:
-          x: 1
-          'y': 0.45714286
+          x: 0.32984293
+          'y': 0.42857143
         rotation: 0
         uid: 1cRbbTTRzCHgjn
         exts: {}
@@ -7585,28 +7623,6 @@ rooms:
         scale:
           x: 1
           'y': 0.45714286
-        rotation: 0
-        uid: 1cRbbTTRzCHgjn
-        exts: {}
-        customProperties: {}
-      - x: -192
-        'y': 288
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1
-          'y': 1
-        rotation: 0
-        uid: 1cRbbTTRzCHgjn
-        exts: {}
-        customProperties: {}
-      - x: 928
-        'y': 688
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1.63350785
-          'y': 1
         rotation: 0
         uid: 1cRbbTTRzCHgjn
         exts: {}
@@ -7919,7 +7935,7 @@ rooms:
         uid: W135h7PGBzcWLB
         exts: *ref_6
         customProperties: *ref_7
-      - x: -180
+      - x: -100
         'y': 0
         opacity: 1
         tint: 16777215
@@ -7963,8 +7979,8 @@ rooms:
         uid: 1cRbbTTRzCHgjn
         exts: {}
         customProperties: {}
-      - x: 844
-        'y': 661
+      - x: 849
+        'y': 660
         opacity: 1
         tint: 16777215
         scale:
@@ -7985,17 +8001,6 @@ rooms:
         uid: dzFzhGJ9PJ9CHk
         exts: {}
         customProperties: {}
-      - x: 96
-        'y': 64
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 0.67605634
-          'y': -0.56140351
-        rotation: 0
-        uid: dzFzhGJ9PJ9CHk
-        exts: {}
-        customProperties: {}
       - x: 866
         'y': 64
         opacity: 1
@@ -8009,6 +8014,19 @@ rooms:
         customProperties: {}
       - x: -110
         'y': 64
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 0.75
+          'y': 0.78666667
+        rotation: 0
+        uid: T5qkQrDTnNDf3D
+        exts: {}
+        customProperties:
+          newProperty1: ''
+          newProperty2: ''
+      - x: -110
+        'y': 464
         opacity: 1
         tint: 16777215
         scale:
@@ -8043,26 +8061,90 @@ rooms:
         uid: T5qkQrDTnNDf3D
         exts: {}
         customProperties: {}
-      - x: -110
-        'y': 464
+      - x: -75
+        'y': 340
         opacity: 1
         tint: 16777215
         scale:
-          x: 0.75
-          'y': 0.78666667
+          x: -1
+          'y': 1
         rotation: 0
-        uid: T5qkQrDTnNDf3D
+        uid: cqqdNgkBk88ckw
         exts: {}
-        customProperties:
-          newProperty1: ''
-          newProperty2: ''
+        customProperties: {}
+      - x: -110
+        'y': 690
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1.2408377
+          'y': 0.94285714
+        rotation: 0
+        uid: 1cRbbTTRzCHgjn
+        exts: {}
+        customProperties: {}
+      - x: -75
+        'y': 0
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: -1
+          'y': 1
+        rotation: 0
+        uid: cqqdNgkBk88ckw
+        exts: {}
+        customProperties: {}
+      - x: 1185
+        'y': 0
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1
+          'y': 1
+        rotation: 0
+        uid: cqqdNgkBk88ckw
+        exts: {}
+        customProperties: {}
+      - x: 1185
+        'y': 340
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1
+          'y': 1
+        rotation: 0
+        uid: cqqdNgkBk88ckw
+        exts: {}
+        customProperties: {}
+      - x: 928
+        'y': 690
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1.52879581
+          'y': 1
+        rotation: 0
+        uid: 1cRbbTTRzCHgjn
+        exts: {}
+        customProperties: {}
+      - x: 96
+        'y': 64
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 0.67605634
+          'y': -0.56140351
+        rotation: 0
+        uid: dzFzhGJ9PJ9CHk
+        exts: {}
+        customProperties: {}
     tiles:
       - depth: 1
         tiles: []
         extends: {}
         hidden: false
     extends: {}
-    lastmod: 1704232092272
+    lastmod: 1704317772651
     events:
       - eventKey: OnRoomStart
         code: >
@@ -9929,97 +10011,6 @@ rooms:
         arguments: {}
         lib: core
     uid: kq5mbjRprBW89L
-  - type: room
-    oncreate: ''
-    onstep: ''
-    ondraw: ''
-    onleave: ''
-    gridX: 5
-    gridY: 5
-    diagonalGrid: false
-    simulate: true
-    width: 1280
-    height: 720
-    restrictCamera: false
-    restrictMaxX: 1280
-    restrictMinX: 1280
-    restrictMaxY: 720
-    restrictMinY: 720
-    isUi: false
-    name: Room_Puzzle_Pipes_dup
-    backgroundColor: '#000000'
-    follow: -1
-    backgrounds: []
-    copies:
-      - x: 0
-        'y': 0
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1.26164875
-          'y': 1.43426295
-        rotation: 0
-        uid: KPQQ9RdM3P7bRh
-        exts: {}
-        customProperties: {}
-      - x: 998.79428571
-        'y': 19.82285714
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 0.4
-          'y': 0.4
-        rotation: 0
-        uid: zTf3hWP3nKGMhm
-        exts: {}
-        customProperties: {}
-      - x: 605
-        'y': 100.00000000000003
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1.0113960113960114
-          'y': 2.1702127659574466
-        rotation: 0
-        uid: 5qNm5Jn2njFgMr
-        exts: {}
-        customProperties: {}
-      - x: 55
-        'y': 95
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1.1018711
-          'y': 1.1
-        rotation: 0
-        uid: 4zDcPd9cp6LqfL
-        exts: {}
-        customProperties: {}
-      - x: 225
-        'y': 640
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1
-          'y': 1
-        rotation: 0
-        uid: Cc94g82RLh4cTF
-        exts: {}
-        customProperties: {}
-    tiles: []
-    extends: {}
-    lastmod: 1704237785617
-    events:
-      - eventKey: OnRoomStart
-        code: "\n\nthis.puzzleType = \"flow\";\nthis.elementSymbol = roomOptions[this.name].symbol;\nassert(this.elementSymbol);\nthis.element = info4symbol[this.elementSymbol]\n\n// get harder\nthis.puzzleSize = Math.min(Math.max(10, this.element.atomic_number / 5), 5);\n\nconsole.log(\"room\", this, \"roomOptions\", JSON.stringify(roomOptions), \"element\", this.element);\n\nUI.modal = this;\n\nct.rooms.append('Room_UI');\n\nconst BLANK_TEXTURE = \"pipe-empty\";\nconst EW_TEXTURE = \"pipe-bit-1\";\nconst NW_TEXTURE = \"pipe-corner-NW\";\nconst SW_TEXTURE = \"pipe-corner-SW\";\n\n// container\nthis.sortableChildren = true;\nlet pContainer = getTemplates(this,\"PlumbingContainer\")[0];\npContainer.zIndex = 100;\n// NB: x/y adjustment numbers found by random tweaking :'(\nlet sqWidth = Math.floor((pContainer.width - 150) / this.puzzleSize);\nlet offsetX = (pContainer.width - sqWidth*this.puzzleSize)/2 + 15; \nlet offsetY = 20 + 32; \n\n// Text\nlet textBlock = getTemplates(this, \"TextBlock\")[0];\nlet info = info4symbol[this.elementSymbol];\naddText(textBlock, info.atomic_number+\": \"+info.name+\" (\"+info.symbol+\")\\n\"\n    +\"At room temperature: \"+info.standard_conditions_state+\"\\n\"\n    +\"Normal appearance: \"+info.appearance+\"\\n\"\n    +info.interesting_fact\n    // +JSON.stringify(info)\n    , 10, 10, {wordWrap:true, wordWrapWidth: textBlock.width - 20});\n\n// TODO seeds\n\n/**\n * @returns {Pipe[]}\n */\nfunction makePipes({w=8}) {\n    let pipes = [];\n    for(let i=0; i<w; i++) {\n        let pipe = new Pipe();\n        pipes.push(pipe);\n        pipe.col = Object.keys(colour)[i];\n        for(let j=0; j<w; j++) {\t\t\t\t\n            pipe.xys.push([i, j]);\n        }\n    }\n\n    // mutate - move a pair of pipe ends\n    for(let i=0; i<1000000; i++) {\n        let pipe1 = getRandomMember(pipes);\n        let pipe2 = getRandomMember(pipes);\n        if (pipe1==pipe2) continue;\n        let ai = getRandomChoice(0.5)? 0 : pipe1.xys.length - 1;\n        let bi = getRandomChoice(0.5)? 0 : pipe2.xys.length - 1;\n        let a0 = pipe1.xys[ai];\n        let b0 = pipe2.xys[bi];\n        if (isTouching(a0, b0)) {\n            // move one end\n            if (getRandomChoice(0.5)) {\n                movePipe(pipe1,ai,pipe2,bi);\n            } else {\n                movePipe(pipe2,bi,pipe1,ai);\n            }\n        }\n    }\t\n    return pipes;\t\n} // ./ makePipes\n\nfunction movePipe(pipe1,  ai,  pipe2,  bi) {\n    if (pipe1.xys.length < 4) return;\n    let s = pipe1.xys[ai];\n    // avoid looping back:\n    if (isLoopBack(s, pipe2, pipe2.xys[bi])) {\n        return;\n    } else {\n        pipe1.xys = pipe1.xys.filter(xy => xy !== s);\n        if (bi==0) pipe2.xys.splice(bi, 0, s);\n        else pipe2.xys.push(s);\n    }\n}\n\nfunction isLoopBack(s, pipe2, b0) {\n    for (let i = 0; i < pipe2.xys.length; i++) {\n        let b = pipe2.xys[i];\n        if (b===b0) continue;\n        if (isTouching(s,b)) return true;\n    }\n    return false;\n}\n\nthis.pipes = makePipes({w:this.puzzleSize});\n\nconsole.log(this.pipes);\n\n// render\nthis.grid = [];\nfor(let i=0; i<this.puzzleSize; i++) this.grid.push([]);\nthis.pipes.forEach(pipe => {\n    let start = pipe.xys[0];\n    let end = pipe.xys[pipe.xys.length-1];\n    // pipe.xys.forEach(xy => {\n    [start, end].forEach(xy => {\n        let pb = new PipeBit();\n        pb.col = pipe.col;\n        pb.isEnd = true;\n        this.grid[xy[0]][xy[1]] = pb;\n    });\n});\n// console.log(\"grid\", this.grid);\n\nlet modal = ct.templates.list['modal'].find(m => m.getRoom() === this);\n\n\n// draw grid\nlet pGridLines = new PIXI.Graphics();\npGridLines.lineStyle(3, 0xcccccc, 0.5, 0.5, true);\nlet h = 38; // adjust for half-brick centering in tile bits\nlet endX = offsetX + this.puzzleSize * sqWidth - h;\nlet endY = offsetY + this.puzzleSize * sqWidth - h;\nfor(let col=0; col < this.grid.length + 1; col++) {\n    pGridLines.moveTo(offsetX-35, offsetY - 38 + sqWidth*col);\n    pGridLines.lineTo(endX, offsetY - 38 + sqWidth*col);\n}\nfor(let row=0; row < this.grid.length + 1; row++) {\n    pGridLines.moveTo(offsetX-38 +sqWidth*row, offsetY-38);\n    pGridLines.lineTo(offsetX-38 +sqWidth*row, endY);\n}\npContainer.addChild(pGridLines);\n\n// grid to tile-grid\nfor(let i=0; i<this.grid.length; i++) {\n    for(let j=0; j<this.grid.length; j++) { // NB: assume square\n        // console.log(\"grid i j\", i, j, this.grid[i][j], this.grid[i][j]?.col);\n        let copy = ct.templates.copy(\"empty-tile\");\n        copy.zIndex = 100;\n        copy.pipeColor = this.grid[i][j]?.col;\n        // let obj = new PIXI.Graphics();\n        copy.gridx = j;\n        copy.gridy = i;\n        copy.x = offsetX + sqWidth*j;\n        copy.y = offsetY + sqWidth*i;\n\n        if (copy.pipeColor) {\n            copy.isEnd = true;\n            copy.tex = \"pipe-end-block\";\n            const col = colour[copy.pipeColor];\n            copy.tint = col;\n            // obj.beginFill(colour[copy.pipeColor]);\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);            \n        } else {        \n            copy.tex = BLANK_TEXTURE; //\"pipe-bit-1\";\n            // obj.beginFill(0); // not clickabale otherwise??\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);\n            // obj.lineStyle(1, colour[\"grey\"]);\n            // obj.moveTo(1,1);\n            // obj.lineTo(1, sqWidth-2);\n            // obj.lineTo(sqWidth-2, sqWidth-2);\n            // obj.lineTo(sqWidth-2, 1);\n            // obj.lineTo(1, 1);\n        }        \n        copy.width  = sqWidth;\n        copy.height = sqWidth;\n        // copy.height = sqWidth;\n\n        // copy.addChild(obj);\n        pContainer.addChild(copy);\n    }\n}\n\nthis.pipeColourMarker = getTemplates(this, \"PipeColorMarker\")[0];\nassert(this.pipeColourMarker);\n// this.pipeColourMarker = new PIXI.Graphics();\n// this.pipeColourMarker.beginFill(colour[0]);\n// let r = sqWidth / 2;\n// this.pipeColourMarker.drawCircle(r,r,r);\n\n// this.pipeColourMarker.x = offsetX + (sqWidth+2) * this.puzzleSize;\n// this.pipeColourMarker.y = offsetY;\n// modal.addChild(this.pipeColourMarker);\n\nfunction setColor(color, room) {\n    assert(room, \"no room\",color);\n    // select\n    room.selectedColor = color;\n    room.downColor = color;\n    console.log(\"col\",color);\n    const col = colour[color];\n    room.pipeColourMarker.tint = col;\n    // room.pipeColourMarker.beginFill(colour[color]);\n    // let r = sqWidth / 2;\n    // room.pipeColourMarker.drawCircle(r,r,r);\n}\nthis.setPipeColor = setColor;\n\nthis.onTileClick = (This) => {\n    console.log(\"click\",This);\n    let room = This.getRoom();\n    if (This.isEnd) {\n        setColor(This.pipeColor, room);\n    } else {\n        room.doFillTile(This, room.selectedColor);\n    }\n};\n\n\nthis.doFillTile = function(This, color) {\n    console.log(\"bar\");\n    assert(This);\n    let room = This.getRoom();\n    assert(room, This);\n    if (This.isEnd) {\n        if (color===This.pipeColor) {\n            setColor(null, room);\n        } else {\n            setColor(This.pipeColor, room);\n        }\n        return;\n    }\n    This.tex = EW_TEXTURE;\n    This.pipeColor = color;\n    const col = colour[This.pipeColor];\n    This.tint = col; \n    let pb = new PipeBit();\n    pb.col = This.pipeColor;\n    pb.pTile = This;\n    room.grid[This.gridy][This.gridx] = pb;\n    // adjust graphics\n    setPipeTexture(This, room);\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid); // TODO\n    gn.forEach(nxy => {\n        let pTile = getGridEntry(room.grid, nxy)?.pTile;\n        if (pTile) setPipeTexture(pTile, room);\n    });\n    // Win?\n    let win = checkWin(room.grid, room.pipes);\n    if (win) {\n        doWin(room);\n    }\n};\n\n\nfunction setPipeTexture(This, room) {\n    console.log(\"setPipeTexture\",This);\n    assert( ! This.isEnd);\n    let col = This.pipeColor;\n    if ( ! col) {\n        This.tex = BLANK_TEXTURE;\n        return;\n    }\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid);\n    console.log(\"setPipeTexture xy\",xy,\"gn\",gn);\n    let sameColor = gn.filter(nxy => {\n        // console.log(\"setPipeTexture xy\",xy,\"gn\",gn,\"grid row\",room.grid[nxy[1]]);\n        let row = room.grid[nxy[1]];\n        if ( ! row) {\n            // console.warn(\"no row in grid\",nxy,room.grid);\n            return false;\n        }\n        let npb = row[nxy[0]];\n        return npb?.col === col;\n    });\n    console.log(\"TODO which pipe texture? sameColor\",sameColor,\"xy\", xy, This, room)\n    let n = contains([xy[0],xy[1]-1], sameColor);\n    let s = contains([xy[0],xy[1]+1], sameColor);\n    let e = contains([xy[0]+1,xy[1]], sameColor);\n    let w = contains([xy[0]-1,xy[1]], sameColor);\n    console.log(\"what corner?\",\"n\",n,\"e\",e,\"s\",s,\"w\",w,\"xy\",xy);\n\n    if (n || s) {\n        if ( ! e && ! w) {\n            This.tex = EW_TEXTURE;\n            This.rotation = Math.PI / 2;\n            return;\n        }\n    } else if (e || w) {\n        This.tex = EW_TEXTURE;\n        This.rotation = 0; // reset\n        return;\n    } else {\n        This.tex = BLANK_TEXTURE;\n    }\n    // corner\n    This.rotation = 0; // reset\n    if (n && w) {\n        This.tex = NW_TEXTURE; \n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (s && w) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (n && e) {\n        This.tex = NW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    if (s && e) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    // error\n    This.tex = EW_TEXTURE;\n    console.error(\"what corner?\",n,e,s,w,xy);\n}\n\nfunction doWin(room) {\n    ct.sound.spawn(\"Success\");\n    room.win = true;\n    let x = room.pipeColourMarker.x;\n    let y = room.pipeColourMarker.y;\n    ct.emitters.append(room.pipeColourMarker, \"Tandem_Sparks\"); // fire(\"Tandem_Sparks\", x, y);\n    doUnlock(room.elementSymbol);\n    addCanister(room.elementSymbol);\n    // close\n    ct.sound.spawn(\"Sound_Squeaky_Open\", {volume:0.5}, () => {\n        moveRoom(\"Room_Platformer\");\n    });\n}\n\nfunction checkWin(grid, pipes) {\n    console.log(\"TODO checkWin\", grid, pipes);\n    for(let i=0; i<pipes.length; i++) {\n        if ( ! checkWin2_onePipe(grid, pipes[i])) return false;\n    }\n    return true;\n}\n\n/**\n * @param {PipeBit[][]} grid\n */\nfunction checkWin2_onePipe(grid, pipe) {\n    console.log(\"pipe\", pipe.col, pipe,\"grid\",grid);\n    let startXY = pipe.xys[0];\n    let endXY = pipe.xys[pipe.xys.length-1];\n    let path = [startXY];\n    let steps = 0;\n    while(steps < 20) {\n        steps++;\n        let tip = path[path.length-1];\n        let gn = getGridNeighbours(tip, grid);\n        console.log(\"path\", path, \"gn\",gn,\"tip\",tip);\n        let nextBits = gn.filter(xy => {\n            let g0 = grid[xy[0]];\n            if ( ! g0) return false;\n            let pb = g0[xy[1]];\n            console.log(\"nextBits check xy\", xy, \"pb\", pb, path);\n            return pb && pb.col === pipe.col && ! contains(xy, path);\n        }) ;  \n        console.log(path, \"nextBits\",nextBits, grid, pipe);\n        if ( ! nextBits.length) {\n            console.log(\"FAIL for \", pipe.col, path);\n            return false;\n        }\n        let nextBit = nextBits[0];\n        if (eq(nextBit, endXY)) {\n            console.log(\"WIN for \", pipe.col, path);\n            return true;\n        }\n        console.log(\"LOOP \", pipe.col, nextBit, \"path\",path,\"endXY\", endXY);\n        path.push(nextBit);\n    }\n    // let next = grid.\n    console.log(\"max steps for \", pipe.col, path);\n    return false; // TODO\n}\n\n/**\n * @returns {Array[]} [[x,y], ...]\n */\nfunction getGridNeighbours(xy, grid) {\n    let neighbours = [[1,0],[-1,0],[0,1],[0,-1]].map(dxdy => [xy[0]+dxdy[0], xy[1]+dxdy[1]]);\n    let filtered = neighbours.filter(cell => cell[0] > 0 && cell[1] > 0 && cell[0] < grid.length && cell[1] < grid[0].length);\n    console.log(\"neighbours\",xy,grid,\"filtered\", filtered);\n    return neighbours;\n}\n\nthis.sortChildren();"
-        arguments: {}
-        lib: core
-      - eventKey: OnStep
-        code: |+
-
-        arguments: {}
-        lib: core
-    uid: HQhfCzc5t8M3HP
 actions:
   - name: Press
     methods:
@@ -10229,7 +10220,7 @@ emitterTandems:
     type: tandem
 scripts:
   - name: utils
-    code: "\nlet seed = Math.floor(Math.random()*1000);\n\nconst random = ct.random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return random() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(random()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nUI = {};\n\nfunction assert(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n\n\nasync function pause(msecs) {\n    let p = ct.timer.add(msecs);\n    await p;\n}\n\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return ct.templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    assert( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        assert(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text, options={}) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = ct.templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.x = ct.room.width / 3;\n    pTextBlock.width = ct.room.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    ct.timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (this.pTooltip) {\n        if (this.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    this.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if (this.pTooltip) {\n        this.pTooltip.destroy();\n        this.pTooltip = null;\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    assert(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = ct.styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    assert(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n/**\n * @param {PIXI.Sprite} pSprite\n * @param {Chat|string} chat\n */\nfunction doTalk(pSprite, chat) {\n    if (typeof(chat)===\"string\") {\n        chat = new Chat(chat); // convert\n    }\n    if (pSprite.pTalkToMe) {\n        pSprite.pTalkToMe.kill = true;\n        pSprite.pTalkToMe = null;\n    }\n    // cat sound?\n    if (chat.sound && ! chat.soundPlayed) {\n        chat.soundPlayed = true;\n        ct.sound.spawn(chat.sound, {volume:0.5});\n    }\n\n    // chain async calls to step through the text\n    const control = {};\n    let p = null;\n    chat.lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    // talking promise\n    p = p.then(() => { \n        pSprite.talking = null; \n        console.log(\"null talking\",pSprite.pSpeechBubble);\n    });\n    assert(p);\n    pSprite.talking = p;\n    // follow on action - like move room?\n    if (chat.then) {\n        p = p.then(chat.then);\n    }\n    return p;\n}\n\nasync function doTalk2(pSprite, chatLine, control) {\n    const text = chatLine.text;\n    assert(text, chatLine);\n    if (control.stop) {\n        console.log(\"stop talking\", chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }    \n    let sx = pSprite.x-20;\n    let sy = pSprite.y - pSprite.height;\n    if (sy < 200) {\n        console.log(\"shift left\");\n        sy = 220;\n        sx -= 50;\n    }    \n    pSprite.pSpeechBubble = ct.templates.copyIntoRoom(\"speech-bubble\", sx, sy, ct.room);\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth}); //verticalCenter:true\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n    console.log(\"pSprite.pSpeechBubble\", pSprite.pSpeechBubble, sx, sy);\n\n    var timer = ct.timer.add(msecs,'talk');\n    let promise = timer.then(() => {\n        chatLine.done = true;\n        console.log(\"done \"+text, chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\nfunction offerTalk(pSprite) {\n    if (pSprite.pTalkToMe || pSprite.pSpeechBubble) return;\n    if (this.chat && this.chat.lines.find(line => ! line.done)) {\n        if ( ! this.pTalkToMe) {\n            this.pTalkToMe = ct.templates.copy(\"speech-bubble\", -5, -this.height -5);\n            this.addChild(this.pTalkToMe);\n            this.pTalkToMe.scale.x = 0.25;\n            this.pTalkToMe.scale.y = 0.25;            \n        }\n        this.pTalkToMe.visible = true;\n        this.pTalkToMe.alpha = 0.75;\n    }    \n}\n\nlet lastMove = new Date().getTime() - 2000;\nlet moving = false;\n\n/**\n  HACK: set playerx, playery for the room you are _leaving_\n * @param {!string} roomName * no-op if already in the room AND options arent modified\n * @param {?Object} options update state for roomName\n * @param {?Object} moveOptions {transition:none|??}\n */\nfunction moveRoom(roomName, options, moveOptions) {\n    console.error(\"moveRoom\",roomName, options,moveOptions); // for debug\n    if (moving) return; // no overlaps\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    if (ct.room.name === roomName) { // paranoia\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = options && Object.entries(options).find(([k,v]) => ro[k] !== v);\n        if ( ! mod) {\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n        console.log(\"moveRoom\",roomName, \"mod\",mod);\n    }\n    // anti-flicker\n    lastMove = new Date().getTime();\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // stash player x/y on the leaving room\n    // NB: If we move from Room_PLatformer X to Room_PLatformer Y -- the later updateRoomState can set x or y\n    let player = getPlayer();\n    if (player) {\n        let leaveState = {playerx: player.x, playery: player.y};\n        updateRoomState(ct.room.name, leaveState);\n    }\n    const moveRoom2 = () => {\n        moving = false;\n        // // close modal?\n        // if (UI.modal) {\n        //     ct.rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        ct.rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            updateRoomState(roomName, options);\n        }\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    moving = true;\n    ct.transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(ct.room, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction remove(array, item) {\n    assert(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    assert(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};\n\n/**\n * Fix bug (dec 2023) where scale is ignored\n */\nfunction getBounds(pSprite) {\n    if ( ! pSprite.shape) {\n        console.log(\"no shape\",pSprite);\n        return pSprite.getBounds();\n    }\n\tlet h = pSprite.height;\n\tlet w = pSprite.width;\n\tlet {left,right,top,bottom, type, r} = pSprite.shape;\n\t// scale\n\tif (pSprite.scale.y) {\n\t\ttop *= pSprite.scale.y;\n\t\tbottom *= pSprite.scale.y;\n\t\tr *= pSprite.scale.y;\n\t}\n\tif (pSprite.scale.x) {\n\t\tleft *= pSprite.scale.x;\n\t\tright *= pSprite.scale.x;\n\t}\n\tlet b1;\n\tif (type===\"circle\") {\n\t\tb1 = {\n\t\t\tx: pSprite.x - r, \n\t\t\ty: pSprite.y - r,\n\t\t\twidth: 2*r, \n\t\t\theight: 2*r\n\t\t};\n\t} else {\n\t\tb1 = {\n\t\t\tx: pSprite.x - left, \n\t\t\ty: pSprite.y - top,\n\t\t\twidth: right - left, //;left - right, \n\t\t\theight: top - bottom\n\t\t};\n\t}\n\tassert(b1.height >= -0.1, b1); // allow maths precision\n\tassert(b1.width >= -0.1, b1);\n    // console.log(\"boundsshape\",pSprite);\n    return b1;\n}\n\n\nlet pg1, pg2;\n/**\n * @returns {boolean} box collision test\n */\nfunction testBoxCollision(bounds1, bounds2)\n{\n    console.log(\"testBoxCollision\",bounds1, bounds2);\n    let hit = bounds1.x < bounds2.x + bounds2.width\n        && bounds1.x + bounds1.width > bounds2.x\n        && bounds1.y < bounds2.y + bounds2.height\n        && bounds1.y + bounds1.height > bounds2.y;\n        // debug\n    // if ( ! this.pg1) {\n    //     let pg1 = new PIXI.Graphics();\n    //     this.pg1 = pg1;\n    //     ct.room.addChild(this.pg1);            \n    //     let pg2 = new PIXI.Graphics();\n    //     this.pg2 = pg2;\n    //     ct.room.addChild(this.pg2);            \n    // }\n    // this.pg1.clear();\n    // this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);\n    // this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);\n    // this.pg1.beginFill(0xCCFFCC,1);\n    // this.pg1.drawCircle(bounds1.x, bounds1.y, 3);\n\n    // this.pg2.clear();\n    // this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);\n    // this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);\n    // this.pg2.beginFill(0xCCCCFF,1);\n    // this.pg2.drawCircle(bounds2.x, bounds2.y, 3);\n\n    return hit;\n}\n\nconst _spawn = ct.sound.spawn;\nct.sound.spawn = function soundSpawn(name, options, callback) {\n    if (getOption(\"sound\")) {\n        _spawn(name, options, callback);\n    } else if (callback) {\n        // better do the callback anyway, after a short pause\n        ct.timer.add(250).then(callback);\n    }\n}\nfunction musicSpawn(name, options, callback) {\n    if (getOption(\"music\")) {\n        ct.sound.spawn(name, options, callback);\n    }\n}\n\n\nasync function pulse(pSprite, tint=0x9999ff, pChimp) {\n    if (pSprite._pulse) return;    \n    // pSprite._pulse = new Date().getTime(); // tween??\n    try {\n        pSprite.tint = tint;\n        await pause(200);\n        while(pChimp && ct.place.collide(pChimp, pSprite)) {\n            await pause(100);\n        }\n        pSprite.tint = 0xffffff;\n        pSprite._pulse = null;\n    } catch(ohwell) {\n        // console.log(\"(skip) pulse error\",ohwell); // harmless\n    }\n};\n    // console.log(\"pulse!\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint\n    //     }        \n    // });\n    // await pSprite._pulse; \n    // console.log(\"pulse 2\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint: 0xffffff\n    //     }        \n    // });        \n    // await pSprite._pulse;\n    // pSprite._pulse = null;\n    // console.log(\"pulse done\");\n\n// HACK fix bug Jan 2024\nconst _onDestroy = ct.templates.onDestroy;\nfunction od2(args) => {    \n    console.warn(\"onDestroy this\", this, args);\n    try {\n        _onDestroy.apply(this, args);\n    } catch(wtf) {\n        console.error(\"onDestroy\", wtf, this);\n    }\n};\nct.templates.onDestroy = od2;"
+    code: "\nlet seed = Math.floor(Math.random()*1000);\n\nconst random = ct.random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return random() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(random()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nUI = {};\n\nfunction assert(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n\n\nasync function pause(msecs) {\n    let p = ct.timer.add(msecs);\n    await p;\n}\n\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return ct.templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    assert( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        assert(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text, options={}) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = ct.templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.x = ct.room.width / 3;\n    pTextBlock.width = ct.room.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    ct.timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (this.pTooltip) {\n        if (this.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    this.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if (this.pTooltip) {\n        this.pTooltip.destroy();\n        this.pTooltip = null;\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    assert(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = ct.styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    assert(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n/**\n * @param {PIXI.Sprite} pSprite\n * @param {Chat|string} chat\n */\nfunction doTalk(pSprite, chat) {\n    if (typeof(chat)===\"string\") {\n        chat = new Chat(chat); // convert\n    }\n    if (pSprite.pTalkToMe) {\n        pSprite.pTalkToMe.kill = true;\n        pSprite.pTalkToMe = null;\n    }\n    // cat sound?\n    if (chat.sound && ! chat.soundPlayed) {\n        chat.soundPlayed = true;\n        ct.sound.spawn(chat.sound, {volume:0.5});\n    }\n\n    // chain async calls to step through the text\n    const control = {};\n    let p = null;\n    chat.lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    // talking promise\n    p = p.then(() => { \n        pSprite.talking = null; \n        console.log(\"null talking\",pSprite.pSpeechBubble);\n    });\n    assert(p);\n    pSprite.talking = p;\n    // follow on action - like move room?\n    if (chat.then) {\n        p = p.then(chat.then);\n    }\n    return p;\n}\n\nasync function doTalk2(pSprite, chatLine, control) {\n    const text = chatLine.text;\n    assert(text, chatLine);\n    if (control.stop) {\n        console.log(\"stop talking\", chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }    \n    let sx = pSprite.x-20;\n    let sy = pSprite.y - pSprite.height;\n    if (sy < 200) {\n        console.log(\"shift left\");\n        sy = 220;\n        sx -= 50;\n    }    \n    pSprite.pSpeechBubble = ct.templates.copyIntoRoom(\"speech-bubble\", sx, sy, ct.room);\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth}); //verticalCenter:true\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n    console.log(\"pSprite.pSpeechBubble\", pSprite.pSpeechBubble, sx, sy);\n\n    var timer = ct.timer.add(msecs,'talk');\n    let promise = timer.then(() => {\n        chatLine.done = true;\n        console.log(\"done \"+text, chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\nfunction offerTalk(pSprite) {\n    if (pSprite.pTalkToMe || pSprite.pSpeechBubble) return;\n    if (this.chat && this.chat.lines.find(line => ! line.done)) {\n        if ( ! this.pTalkToMe) {\n            this.pTalkToMe = ct.templates.copy(\"speech-bubble\", -5, -this.height -5);\n            this.addChild(this.pTalkToMe);\n            this.pTalkToMe.scale.x = 0.25;\n            this.pTalkToMe.scale.y = 0.25;            \n        }\n        this.pTalkToMe.visible = true;\n        this.pTalkToMe.alpha = 0.75;\n    }    \n}\n\nlet lastMove = new Date().getTime() - 2000;\nlet moving = false;\n\n/**\n  HACK: set playerx, playery for the room you are _leaving_\n * @param {!string} roomName * no-op if already in the room AND options arent modified\n * @param {?Object} options update state for roomName\n * @param {?Object} moveOptions {transition:none|??}\n */\nfunction moveRoom(roomName, options, moveOptions) {\n    console.error(\"moveRoom\",roomName, options,moveOptions); // for debug\n    if (moving) return; // no overlaps\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    if (ct.room.name === roomName) { // paranoia\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = options && Object.entries(options).find(([k,v]) => ro[k] !== v);\n        if ( ! mod) {\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n        console.log(\"moveRoom\",roomName, \"mod\",mod);\n    }\n    // anti-flicker\n    lastMove = new Date().getTime();\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // stash player x/y on the leaving room\n    // NB: If we move from Room_PLatformer X to Room_PLatformer Y -- the later updateRoomState can set x or y\n    let player = getPlayer();\n    if (player) {\n        let leaveState = {playerx: player.x, playery: player.y};\n        updateRoomState(ct.room.name, leaveState);\n    }\n    const moveRoom2 = () => {\n        moving = false;\n        // // close modal?\n        // if (UI.modal) {\n        //     ct.rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        ct.rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            updateRoomState(roomName, options);\n        }\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    moving = true;\n    ct.transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(ct.room, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction remove(array, item) {\n    assert(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    assert(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};\n\n/**\n * Fix bug (dec 2023) where scale is ignored\n */\nfunction getBounds(pSprite) {\n    if ( ! pSprite.shape) {\n        console.log(\"no shape\",pSprite);\n        return pSprite.getBounds();\n    }\n\tlet h = pSprite.height;\n\tlet w = pSprite.width;\n\tlet {left,right,top,bottom, type, r} = pSprite.shape;\n\t// scale\n\tif (pSprite.scale.y) {\n\t\ttop *= pSprite.scale.y;\n\t\tbottom *= pSprite.scale.y;\n\t\tr *= pSprite.scale.y;\n\t}\n\tif (pSprite.scale.x) {\n\t\tleft *= pSprite.scale.x;\n\t\tright *= pSprite.scale.x;\n\t}\n\tlet b1;\n\tif (type===\"circle\") {\n\t\tb1 = {\n\t\t\tx: pSprite.x - r, \n\t\t\ty: pSprite.y - r,\n\t\t\twidth: 2*r, \n\t\t\theight: 2*r\n\t\t};\n\t} else {\n\t\tb1 = {\n\t\t\tx: pSprite.x - left, \n\t\t\ty: pSprite.y - top,\n\t\t\twidth: right - left, //;left - right, \n\t\t\theight: top - bottom\n\t\t};\n\t}\n\tassert(b1.height >= -0.1, b1); // allow maths precision\n\tassert(b1.width >= -0.1, b1);\n    // console.log(\"boundsshape\",pSprite);\n    return b1;\n}\n\n\nlet pg1, pg2;\n/**\n * @returns {boolean} box collision test\n */\nfunction testBoxCollision(bounds1, bounds2)\n{\n    console.log(\"testBoxCollision\",bounds1, bounds2);\n    let hit = bounds1.x < bounds2.x + bounds2.width\n        && bounds1.x + bounds1.width > bounds2.x\n        && bounds1.y < bounds2.y + bounds2.height\n        && bounds1.y + bounds1.height > bounds2.y;\n        // debug\n    // if ( ! this.pg1) {\n    //     let pg1 = new PIXI.Graphics();\n    //     this.pg1 = pg1;\n    //     ct.room.addChild(this.pg1);            \n    //     let pg2 = new PIXI.Graphics();\n    //     this.pg2 = pg2;\n    //     ct.room.addChild(this.pg2);            \n    // }\n    // this.pg1.clear();\n    // this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);\n    // this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);\n    // this.pg1.beginFill(0xCCFFCC,1);\n    // this.pg1.drawCircle(bounds1.x, bounds1.y, 3);\n\n    // this.pg2.clear();\n    // this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);\n    // this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);\n    // this.pg2.beginFill(0xCCCCFF,1);\n    // this.pg2.drawCircle(bounds2.x, bounds2.y, 3);\n\n    return hit;\n}\n\nconst _spawn = ct.sound.spawn;\nct.sound.spawn = function soundSpawn(name, options, callback) {\n    if (getOption(\"sound\")) {\n        _spawn(name, options, callback);\n    } else if (callback) {\n        // better do the callback anyway, after a short pause\n        ct.timer.add(250).then(callback);\n    }\n}\nfunction musicSpawn(name, options, callback) {\n    if (getOption(\"music\")) {\n        ct.sound.spawn(name, options, callback);\n    }\n}\n\n\nasync function pulse(pSprite, tint=0x9999ff, pChimp) {\n    if (pSprite._pulse) return;    \n    // pSprite._pulse = new Date().getTime(); // tween??\n    try {\n        pSprite.tint = tint;\n        await pause(200);\n        while(pChimp && ct.place.collide(pChimp, pSprite)) {\n            await pause(100);\n        }\n        pSprite.tint = 0xffffff;\n        pSprite._pulse = null;\n    } catch(ohwell) {\n        // console.log(\"(skip) pulse error\",ohwell); // harmless\n    }\n};\n    // console.log(\"pulse!\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint\n    //     }        \n    // });\n    // await pSprite._pulse; \n    // console.log(\"pulse 2\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint: 0xffffff\n    //     }        \n    // });        \n    // await pSprite._pulse;\n    // pSprite._pulse = null;\n    // console.log(\"pulse done\");\n\n// HACK fix bug Jan 2024\nconst _onDestroy = ct.templates.onDestroy;\nfunction od2(args) {    \n    console.warn(\"onDestroy this\", this, args);\n    try {\n        _onDestroy.apply(this, args);\n    } catch(wtf) {\n        console.error(\"onDestroy\", wtf, this);\n    }\n};\nct.templates.onDestroy = od2;"
   - name: element-info
     code: |-
 
