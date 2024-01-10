@@ -2030,7 +2030,7 @@ textures:
     group: !<tag:yaml.org,2002:js/undefined> ''
     source: /home/daniel/ct.js/img/wall-1.png
     tiled: true
-  - lastmod: 1702414544148
+  - lastmod: 1704740153221
     type: texture
     name: button.scaled
     untill: 0
@@ -2496,6 +2496,35 @@ textures:
     group: !<tag:yaml.org,2002:js/undefined> ''
     source: /home/daniel/winterwell/ctjs/img/wall.png
     tiled: true
+  - lastmod: 1704575564918
+    type: texture
+    name: black
+    untill: 0
+    grid:
+      - 1
+      - 1
+    axis:
+      - 0
+      - 0
+    marginx: 0
+    marginy: 0
+    imgWidth: 2
+    imgHeight: 2
+    width: 2
+    height: 2
+    offx: 0
+    offy: 0
+    origname: ifpnhg3PLddP6ND.png
+    shape: rect
+    left: 0
+    right: 2
+    top: 0
+    bottom: 2
+    uid: fpnhg3PLddP6ND
+    padding: 1
+    isBlank: false
+    group: !<tag:yaml.org,2002:js/undefined> ''
+    source: /home/daniel/ct.js/img/black.png
 skeletons: []
 templates:
   - type: template
@@ -3220,22 +3249,33 @@ templates:
           this.depth = 0;
 
           this.doUse = function(pThis,pChimp) {
+              let open = true || isUnlocked(getSymbol(), pThis.nextSymbol);
               // if ( ! ct.actions.MoveLeftRight.down) return;
               // is it the right way??
-              console.log("lr door?",ct.actions.MoveLeftRight.value, pThis.x);
-              if (this.unlocked) {
+              // console.log("lr door?",open,ct.actions.MoveLeftRight.value, pThis.x);
+              if (open) {
                   assert(pThis.nextSymbol, pThis);
-                  let playerx = pThis.x + pThis.width + 75;
-                  if (pThis.x > ct.room.width / 2) playerx = pThis.x - 75;
+                  let playerx = 0; //enter left
+                  if (pThis.x < ct.room.width / 2) {
+                      playerx = ct.room.width - 100; // enter right
+                  }
                   moveRoom("Room_Platformer", {symbol:pThis.nextSymbol, playerx});
+                  //         let h;
+                  // if (dy===-1) {
+                  //     h = ct.room.height - 75; // floor
+                  // } else {
+                  //     h = pChimp.height*2; // ceiling
+                  // }
+                  // console.log("playery",h);
+                  // updateRoomState(ct.room.name, {playery:h});
+                  return;
               } else {
-                  console.log("locked to ",pThis.nextSymbol);
+                  // console.log("locked to ",pThis.nextSymbol);
                   // open as a modal
-                  if (UI.modal) {
+                  if (UI.modal && UI.modal.name === "Room_CodewordModal") {
                       console.log("modal already", UI.modal);
                       return;
                   }
-                  console.log("Make modal!");
                   updateRoomState("Room_CodewordModal", {nextSymbol: pThis.nextSymbol});
                   let codeRoom = ct.rooms.append('Room_CodewordModal');
                   UI.modal = codeRoom;
@@ -3259,7 +3299,7 @@ templates:
         lib: core
     extends:
       cgroup: interact
-    lastmod: 1704219194530
+    lastmod: 1704575411605
     uid: T5qkQrDTnNDf3D
   - type: template
     name: captain
@@ -3614,7 +3654,7 @@ templates:
         lib: core
     extends:
       cgroup: interact
-    lastmod: 1704219080800
+    lastmod: 1704573496565
     uid: dzFzhGJ9PJ9CHk
   - type: template
     name: exit-button
@@ -3872,7 +3912,7 @@ templates:
         arguments: {}
         lib: core
     extends: {}
-    lastmod: 1702502444029
+    lastmod: 1704740782742
     uid: MMp43Fr6BgcjrG
   - type: template
     name: bridge
@@ -4449,6 +4489,38 @@ templates:
       cgroup: Solid
     lastmod: 1704315781951
     uid: cqqdNgkBk88ckw
+  - type: template
+    name: black
+    depth: 0
+    texture: fpnhg3PLddP6ND
+    playAnimationOnStart: false
+    loopAnimation: true
+    animationFPS: 30
+    visible: true
+    events: []
+    extends: {}
+    lastmod: 1704575574174
+    uid: 5BPgf2T7gc2956
+  - type: template
+    name: button
+    depth: 0
+    texture: nNqdhPMb1N5tQ1
+    playAnimationOnStart: false
+    loopAnimation: true
+    animationFPS: 30
+    visible: true
+    events:
+      - eventKey: OnPointerClick
+        code: if (this.doClick) this.doClick();
+        arguments: {}
+        lib: core
+      - eventKey: OnStep
+        code: 'setText(this, this.text, 0, 0, {center:true, verticalCenter:true});'
+        arguments: {}
+        lib: core
+    extends: {}
+    lastmod: 1704740710922
+    uid: 1pBF4L6tGkhfB5
 sounds:
   - name: Wood_Start
     uid: 42e768ce-6c19-4c34-9f14-11e257ecff18
@@ -4749,7 +4821,7 @@ rooms:
         customProperties: {}
     tiles: []
     extends: {}
-    lastmod: 1704407295023
+    lastmod: 1704576114799
     events:
       - eventKey: OnRoomStart
         code: >
@@ -4785,12 +4857,16 @@ rooms:
           // Merge in a room
 
           {
+              // pick room
               let roomName = ct.rooms.templates["Platformer"+options.symbol]?.name;
               if ( ! roomName) {
-                  let p = platform4symbol[options.symbol] || getRandomMember([2,3,4,5,6]);
-                  console.log("platform",p);
-                  roomName = 'Platformer'+p;
+                  roomName = platform4symbol[options.symbol];                
               }    
+              if ( ! roomName) {
+                  let rooms = Object.keys(ct.rooms.templates).filter(name => name.match(/Platformer[0-9]+/));
+                  roomName = getRandomMember(rooms);
+              }         
+              // merge!
               let room2 = ct.rooms.merge(roomName);
               console.log("merged", room2, "ct.room", ct.room, "parent", ct.room.parent);
               // ct.js bug workaround Dec 2023: patch scale
@@ -5494,7 +5570,7 @@ rooms:
         customProperties: {}
     tiles: []
     extends: {}
-    lastmod: 1704232457071
+    lastmod: 1704573730387
     events:
       - eventKey: OnStep
         code: ''
@@ -5595,8 +5671,7 @@ rooms:
                       // remove??
                       ct.rooms.remove(UI.modal);
                       UI.modal = null;
-                      return;
-                      // moveRoom("Room_Platformer", null, {transition:"none"});
+                      // done as a separate action moveRoom("Room_Platformer", null, {transition:"none"});
                   });
               }
           };
@@ -7287,7 +7362,7 @@ rooms:
     restrictMinY: 720
     isUi: false
     name: PlatformerNe
-    backgroundColor: '#000000'
+    backgroundColor: '#2B2B2B'
     follow: -1
     backgrounds: []
     copies:
@@ -7984,28 +8059,6 @@ rooms:
         uid: W135h7PGBzcWLB
         exts: *ref_8
         customProperties: *ref_9
-      - x: -129
-        'y': 898
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1
-          'y': 1
-        rotation: 0
-        uid: 1cRbbTTRzCHgjn
-        exts: {}
-        customProperties: {}
-      - x: 849
-        'y': 660
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 0.67605634
-          'y': 0.56140351
-        rotation: 0
-        uid: dzFzhGJ9PJ9CHk
-        exts: {}
-        customProperties: {}
       - x: 144
         'y': 656
         opacity: 1
@@ -8154,467 +8207,47 @@ rooms:
         uid: dzFzhGJ9PJ9CHk
         exts: {}
         customProperties: {}
+      - x: 1530
+        'y': -55
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: -155
+          'y': 447.5
+        rotation: 0
+        uid: 5BPgf2T7gc2956
+        exts: {}
+        customProperties: {}
+      - x: -110
+        'y': -55
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: -155
+          'y': 447.5
+        rotation: 0
+        uid: 5BPgf2T7gc2956
+        exts: {}
+        customProperties: {}
+      - x: 849
+        'y': 660
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 0.67605634
+          'y': 0.56140351
+        rotation: 0
+        uid: dzFzhGJ9PJ9CHk
+        exts: {}
+        customProperties: {}
     tiles:
       - depth: 1
         tiles: []
         extends: {}
         hidden: false
     extends: {}
-    lastmod: 1704317772651
-    events:
-      - eventKey: OnRoomStart
-        code: >
-
-
-          // // Make a room
-
-          // console.log("options", this.options, roomOptions[this.name]);
-
-          // // if ( ! this.options) this.options = {symbol:"He"};
-
-          // let options = roomOptions[this.name];
-
-          // if ( ! options) {
-
-          //     options = {symbol:startSymbol};
-
-          //     platform4symbol[startSymbol] = startPlatform;
-
-          //     roomOptions[this.name] = options;
-
-          //     console.log("START at "+options.symbol);
-
-          // }
-
-          // assert(options.symbol, options);
-
-          // this.element = info4symbol[options.symbol];
-
-          // assert(this.element && this.element.atomic_number, "No element info
-          "+this.element);
-
-          // assert(this.element.symbol, this.element);
-
-          // this.atomicNumber = this.element?.atomic_number;
-
-
-          // // fade the BG
-
-          // if ( ! ct.room.backgrounds?.length) {
-
-          //     if ( ! options.bgName) options.bgName =
-          getRandomMember("backdrop wall-1 wall-2 wall-3 wall-4".split("
-          "));    
-
-          //     const bg = ct.backgrounds.add(options.bgName);
-
-          //     bg.alpha = 0.35;
-
-          // }
-
-          // // Hack Neon
-
-          // if (options.symbol === "Ne") {
-
-          //     let pEmpty = ct.templates.copy("Empty");
-
-          //     pEmpty.tex = "red-neon";
-
-          //     pEmpty.x = 350;
-
-          //     pEmpty.y = 200;
-
-          //     pEmpty.alpha = 0.5;
-
-          //    console.log(pEmpty);
-
-          // }
-
-
-          // {
-
-          //     let p = platform4symbol[options.symbol] ||
-          getRandomMember([2,3,4,5]);
-
-          //     console.log("platform",p);
-
-          //     let room2 = ct.rooms.merge('Platformer'+p);
-
-          //     // room2.children.forEach(kid => {
-
-          //     //     room2.removeChild(kid)
-
-          //     //     ct.room.addChild(kid);
-
-          //     // });
-
-          //     console.log("merged", room2, "ct.room", ct.room, "parent",
-          ct.room.parent);
-
-          //     // room2.
-
-          //     // room2.alpha = 1; // huh?
-
-          //     // ct.stage.
-
-          // }
-
-
-          // // add UI
-
-          // let roomUI = ct.rooms.append('Room_UI');
-
-          // // On-screen joystick?
-
-          // // if (isMobile() || true) {
-
-          // //     ct.vkeys.joystick({
-
-          // //         key: 'Vjoy1',
-
-          // //         tex: 'paper', // TODOTrackPad',
-
-          // //         trackballTex: 'spit', // TODO
-
-          // //         depth: 1000,
-
-          // //         x: 500,
-
-          // //         y: 500,
-
-          // //         container: roomUI
-
-          // //     });
-
-          // // }
-
-
-          // class Layout {
-
-          //     nExit;
-
-          //     sExit;
-
-          //     eExit;
-
-          //     wExit;
-
-          //     tank;
-
-          //     cat;
-
-          // }
-
-
-          // /**
-
-          //  * @returns {Layout}
-
-          //  */
-
-          // function layoutRoom(symbol) {
-
-          //     console.log("layoutRoom", symbol);
-
-          //     assert(symbol, "no symbol");
-
-          //     let oldlayout = layout4symbol[symbol];
-
-          //     if (oldlayout) {
-
-          //         console.log("use oldlayout for "+symbol, oldlayout);
-
-          //         return oldlayout;
-
-          //     }
-
-          //     console.log("make new layout for "+symbol);
-
-          //     let layout = new Layout();
-
-          //     layout.symbol = symbol;
-
-          //     layout4symbol[symbol] = layout;
-
-          //     let corners = "NE NW SE SW".split(" "); 
-
-          //     // match existing doors
-
-          //     let leftSymbol = getNextElementSymbol(symbol, -1, 0);
-
-          //     let upSymbol = getNextElementSymbol(symbol, 0, -1);
-
-          //     if (leftSymbol) {
-
-          //         let leftLayout = layoutRoom(leftSymbol);
-
-          //         assert(leftLayout.eExit, "no eExit", leftSymbol,
-          leftLayout);
-
-          //         layout.wExit = leftLayout.eExit.replace("E","W");
-
-          //         remove(corners, layout.wExit);
-
-          //         console.log(symbol, "has leftSymbol", leftSymbol,
-          layout.wExit);
-
-          //     }
-
-          //     if (upSymbol) {
-
-          //         let upLayout = layoutRoom(upSymbol);
-
-          //         assert(upLayout.sExit, "no sExit in upLayout", upSymbol,
-          upLayout);
-
-          //         layout.nExit = upLayout.sExit.replace("S","N");
-
-          //         remove(corners, layout.nExit);
-
-          //     }
-
-          //     console.log("back to layout",symbol,"corners
-          left",corners.join(", "));
-
-          //     // place the tank
-
-          //     let corner = getRandomMember(corners);
-
-          //     layout.tank = corner;
-
-          //     remove(corners, layout.tank);
-
-          //     // place exits
-
-          //     assert(corners.length);
-
-          //     //
-          console.log(symbol,JSON.stringify(corners),JSON.stringify(layout));
-
-          //     // if ( ! layout.wExit) {
-
-          //     //     let corner = getRandomMember(corners);
-
-          //     //     layout.wExit = corner;
-
-          //     // }
-
-          //     if ( ! layout.eExit) {
-
-          //         let eSymbol = getNextElementSymbol(symbol, 1, 0);
-
-          //         if (eSymbol) {
-
-          //             let corner = getRandomMember(corners.filter(c =>
-          c.includes("E")));
-
-          //             if ( ! corner) {
-
-          //                 console.warn("Must now overlap for E");
-
-          //                 if (layout.nExit && layout.nExit.endsWith("E"))
-          corner = layout.nExit;
-
-          //                 else corner = "SE";
-
-          //             }
-
-          //             layout.eExit = corner;
-
-          //         }
-
-          //     }
-
-          //     // if ( ! layout.nExit) {
-
-          //     //     let corner = getRandomMember(corners);
-
-          //     //     layout.nExit = corner;
-
-          //     // }
-
-          //     if ( ! layout.sExit) {
-
-          //         let sSymbol = getNextElementSymbol(symbol, 0, 1);
-
-          //         if (sSymbol) {
-
-          //             let corner = getRandomMember(corners.filter(c =>
-          c.includes("S")));
-
-          //             if ( ! corner) {
-
-          //                 console.warn("Must now overlap for S");
-
-          //                 if (layout.eExit && layout.eExit.startsWith("S"))
-          corner = layout.eExit;
-
-          //                 else corner = "SW";
-
-          //             }
-
-          //             // assert(corner, "no S corners", corners, symbol+ " to
-          "+sSymbol,"layout",layout);
-
-          //             layout.sExit = corner;
-
-          //         } else {
-
-          //             console.log("no S symbol", symbol, sSymbol);
-
-          //         }
-
-          //     }
-
-          //     if ( ! layout.cat) {
-
-          //         let corner = getRandomMember(corners);
-
-          //         layout.cat = corner;
-
-          //     }
-
-          //     console.log("layout", symbol, layout);
-
-          //     return layout;
-
-          // }
-
-
-          // /** use a fn to avoid memory leaks */
-
-          // function arrangeRoom(room) {
-
-          //     let roomState = roomOptions[room.name];
-
-          //     if ( ! roomState) roomState = roomOptions[room.name] = {};
-
-          //     console.log("arrange", room, "element", room.element, "symbol",
-          room.symbol, "state", roomState);
-
-          //     assert(room.element.symbol, room);
-
-          //     const symbol = room.element.symbol;
-
-          //     let layout = layoutRoom(symbol);
-
-          //     console.log(symbol, layout);
-
-          //     let n = room.element.atomic_number % 4;
-
-          //     console.log("n",n,"element",symbol);
-
-          //     let doors = getTemplates(room, "door");
-
-          //     let manholes = getTemplates(room, "manhole");
-
-          //     let tanks = ct.templates.list['tank-2'].filter(tmp =>
-          tmp.getRoom() === room);
-
-          //     // let cats = ct.templates.list['cat-1'].filter(tmp =>
-          tmp.getRoom() === room);
-
-          //     tanks.forEach(tank => {
-
-          //         let corner = getCompassCorner(tank);
-
-          //         if (layout.tank !== corner) {
-
-          //             console.log("kill tank",corner,"vs layout",layout);
-
-          //             tank.kill = true;
-
-          //         }   
-
-          //     });
-
-          //     console.log("doors",doors);
-
-          //     // exists and locks
-
-          //     manholes.forEach(manhole => {
-
-          //         let cc = getCompassCorner(manhole);
-
-          //         if (layout.nExit === cc || layout.sExit === cc) {
-
-          //             let dy = manhole.y > 200? 1 : -1;
-
-          //             let nextSymbol = getNextElementSymbol(symbol, 0, dy);
-
-          //             if ( ! nextSymbol) manhole.kill = true;
-
-          //             manhole.nextSymbol = nextSymbol;
-
-          //             if (isUnlocked(symbol, nextSymbol)) {
-
-          //                 manhole.unlocked = true;
-
-          //             }
-
-          //         } else {
-
-          //             manhole.kill = true;
-
-          //         }
-
-          //     });
-
-          //     doors.forEach(door => {
-
-          //         let cc = getCompassCorner(door);
-
-          //         if (layout.eExit === cc || layout.wExit === cc) {
-
-          //             let dx = door.x > 200? 1 : -1;
-
-          //             let nextSymbol = getNextElementSymbol(symbol, dx, 0);
-
-          //             door.nextSymbol = nextSymbol;
-
-          //             if (isUnlocked(symbol, nextSymbol)) {
-
-          //                 door.unlocked = true;
-
-          //             }
-
-          //         } else {
-
-          //             door.kill = true;
-
-          //         }
-
-          //     });
-
-
-          //     // for(let i=1; i<cats.length; i++) {
-
-          //     //     cats[i].kill = true;
-
-          //     // }
-
-
-          //     // Place the chimp    
-
-          //     if (roomState.playerx) {
-
-          //         let chimp = getTemplates(room, "chimp")[0];
-
-          //         if (chimp) { // paranoia (maybe the chimp got killed)
-
-          //             chimp.x = roomState.playerx;
-
-          //             chimp.y = roomState.playery;
-
-          //         }
-
-          //     }
-
-          // };
-
-          // arrangeRoom(this);
-        arguments: {}
-        lib: core
+    lastmod: 1704576264058
+    events: []
     uid: qpgkg3gT2L92Kr
   - type: room
     oncreate: ''
@@ -8702,7 +8335,7 @@ rooms:
             Use / talk: space
     tiles: []
     extends: {}
-    lastmod: 1704402867806
+    lastmod: 1704573740727
     events:
       - eventKey: OnRoomStart
         code: |
@@ -8741,8 +8374,8 @@ rooms:
     restrictMaxY: 720
     restrictMinY: 720
     isUi: false
-    name: Platformer2
-    backgroundColor: '#000000'
+    name: Platformer1
+    backgroundColor: '#2B2B2B'
     follow: -1
     backgrounds: []
     copies:
@@ -8922,23 +8555,12 @@ rooms:
         uid: 1cRbbTTRzCHgjn
         exts: {}
         customProperties: {}
-      - x: -145
-        'y': 688
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1.42408377
-          'y': 1
-        rotation: 0
-        uid: 1cRbbTTRzCHgjn
-        exts: {}
-        customProperties: {}
       - x: 896
         'y': 288
         opacity: 1
         tint: 16777215
         scale:
-          x: 1.72251309
+          x: 1.6701570700000001
           'y': 0.91428571
         rotation: 0
         uid: 1cRbbTTRzCHgjn
@@ -8949,14 +8571,14 @@ rooms:
         opacity: 1
         tint: 16777215
         scale:
-          x: 1.18324607
-          'y': 0.94285714
+          x: 1.2
+          'y': 1
         rotation: 0
         uid: 1cRbbTTRzCHgjn
         exts: {}
         customProperties: {}
       - x: 128
-        'y': 688
+        'y': 690
         opacity: 1
         tint: 16777215
         scale:
@@ -8977,12 +8599,12 @@ rooms:
         uid: 1cRbbTTRzCHgjn
         exts: {}
         customProperties: {}
-      - x: 0
+      - x: -80
         'y': 288
         opacity: 1
         tint: 16777215
         scale:
-          x: 1
+          x: 1.3
           'y': 1
         rotation: 0
         uid: 1cRbbTTRzCHgjn
@@ -9048,8 +8670,8 @@ rooms:
         opacity: 1
         tint: 16777215
         scale:
-          x: 1
-          'y': 0.45714286
+          x: 0.32984293
+          'y': 0.42857143
         rotation: 0
         uid: 1cRbbTTRzCHgjn
         exts: {}
@@ -9105,28 +8727,6 @@ rooms:
         scale:
           x: 1
           'y': 0.45714286
-        rotation: 0
-        uid: 1cRbbTTRzCHgjn
-        exts: {}
-        customProperties: {}
-      - x: -192
-        'y': 288
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1
-          'y': 1
-        rotation: 0
-        uid: 1cRbbTTRzCHgjn
-        exts: {}
-        customProperties: {}
-      - x: 928
-        'y': 688
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1.63350785
-          'y': 1
         rotation: 0
         uid: 1cRbbTTRzCHgjn
         exts: {}
@@ -9428,7 +9028,7 @@ rooms:
         uid: W135h7PGBzcWLB
         exts: {}
         customProperties: {}
-      - x: -180
+      - x: -100
         'y': 0
         opacity: 1
         tint: 16777215
@@ -9461,28 +9061,6 @@ rooms:
         uid: W135h7PGBzcWLB
         exts: {}
         customProperties: {}
-      - x: -129
-        'y': 898
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 1
-          'y': 1
-        rotation: 0
-        uid: 1cRbbTTRzCHgjn
-        exts: {}
-        customProperties: {}
-      - x: 844
-        'y': 661
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 0.67605634
-          'y': 0.56140351
-        rotation: 0
-        uid: dzFzhGJ9PJ9CHk
-        exts: {}
-        customProperties: {}
       - x: 144
         'y': 656
         opacity: 1
@@ -9490,17 +9068,6 @@ rooms:
         scale:
           x: 0.67605634
           'y': 0.56140351
-        rotation: 0
-        uid: dzFzhGJ9PJ9CHk
-        exts: {}
-        customProperties: {}
-      - x: 96
-        'y': 64
-        opacity: 1
-        tint: 16777215
-        scale:
-          x: 0.67605634
-          'y': -0.56140351
         rotation: 0
         uid: dzFzhGJ9PJ9CHk
         exts: {}
@@ -9518,6 +9085,19 @@ rooms:
         customProperties: {}
       - x: -110
         'y': 64
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 0.75
+          'y': 0.78666667
+        rotation: 0
+        uid: T5qkQrDTnNDf3D
+        exts: {}
+        customProperties:
+          newProperty1: ''
+          newProperty2: ''
+      - x: -110
+        'y': 464
         opacity: 1
         tint: 16777215
         scale:
@@ -9552,481 +9132,125 @@ rooms:
         uid: T5qkQrDTnNDf3D
         exts: {}
         customProperties: {}
-      - x: -110
-        'y': 464
+      - x: -75
+        'y': 340
         opacity: 1
         tint: 16777215
         scale:
-          x: 0.75
-          'y': 0.78666667
+          x: -1
+          'y': 1
         rotation: 0
-        uid: T5qkQrDTnNDf3D
+        uid: cqqdNgkBk88ckw
         exts: {}
-        customProperties:
-          newProperty1: ''
-          newProperty2: ''
+        customProperties: {}
+      - x: -110
+        'y': 690
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1.2408377
+          'y': 0.94285714
+        rotation: 0
+        uid: 1cRbbTTRzCHgjn
+        exts: {}
+        customProperties: {}
+      - x: -75
+        'y': 0
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: -1
+          'y': 1
+        rotation: 0
+        uid: cqqdNgkBk88ckw
+        exts: {}
+        customProperties: {}
+      - x: 1185
+        'y': 0
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1
+          'y': 1
+        rotation: 0
+        uid: cqqdNgkBk88ckw
+        exts: {}
+        customProperties: {}
+      - x: 1185
+        'y': 340
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1
+          'y': 1
+        rotation: 0
+        uid: cqqdNgkBk88ckw
+        exts: {}
+        customProperties: {}
+      - x: 928
+        'y': 690
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 1.52879581
+          'y': 1
+        rotation: 0
+        uid: 1cRbbTTRzCHgjn
+        exts: {}
+        customProperties: {}
+      - x: 96
+        'y': 64
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 0.67605634
+          'y': -0.56140351
+        rotation: 0
+        uid: dzFzhGJ9PJ9CHk
+        exts: {}
+        customProperties: {}
+      - x: 1530
+        'y': -55
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: -155
+          'y': 447.5
+        rotation: 0
+        uid: 5BPgf2T7gc2956
+        exts: {}
+        customProperties: {}
+      - x: -110
+        'y': -55
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: -155
+          'y': 447.5
+        rotation: 0
+        uid: 5BPgf2T7gc2956
+        exts: {}
+        customProperties: {}
+      - x: 849
+        'y': 660
+        opacity: 1
+        tint: 16777215
+        scale:
+          x: 0.67605634
+          'y': 0.56140351
+        rotation: 0
+        uid: dzFzhGJ9PJ9CHk
+        exts: {}
+        customProperties: {}
     tiles:
       - depth: 1
         tiles: []
         extends: {}
         hidden: false
     extends: {}
-    lastmod: 1704232119529
-    events:
-      - eventKey: OnRoomStart
-        code: >
-
-
-          // // Make a room
-
-          // console.log("options", this.options, roomOptions[this.name]);
-
-          // // if ( ! this.options) this.options = {symbol:"He"};
-
-          // let options = roomOptions[this.name];
-
-          // if ( ! options) {
-
-          //     options = {symbol:startSymbol};
-
-          //     platform4symbol[startSymbol] = startPlatform;
-
-          //     roomOptions[this.name] = options;
-
-          //     console.log("START at "+options.symbol);
-
-          // }
-
-          // assert(options.symbol, options);
-
-          // this.element = info4symbol[options.symbol];
-
-          // assert(this.element && this.element.atomic_number, "No element info
-          "+this.element);
-
-          // assert(this.element.symbol, this.element);
-
-          // this.atomicNumber = this.element?.atomic_number;
-
-
-          // // fade the BG
-
-          // if ( ! ct.room.backgrounds?.length) {
-
-          //     if ( ! options.bgName) options.bgName =
-          getRandomMember("backdrop wall-1 wall-2 wall-3 wall-4".split("
-          "));    
-
-          //     const bg = ct.backgrounds.add(options.bgName);
-
-          //     bg.alpha = 0.35;
-
-          // }
-
-          // // Hack Neon
-
-          // if (options.symbol === "Ne") {
-
-          //     let pEmpty = ct.templates.copy("Empty");
-
-          //     pEmpty.tex = "red-neon";
-
-          //     pEmpty.x = 350;
-
-          //     pEmpty.y = 200;
-
-          //     pEmpty.alpha = 0.5;
-
-          //    console.log(pEmpty);
-
-          // }
-
-
-          // {
-
-          //     let p = platform4symbol[options.symbol] ||
-          getRandomMember([2,3,4,5]);
-
-          //     console.log("platform",p);
-
-          //     let room2 = ct.rooms.merge('Platformer'+p);
-
-          //     // room2.children.forEach(kid => {
-
-          //     //     room2.removeChild(kid)
-
-          //     //     ct.room.addChild(kid);
-
-          //     // });
-
-          //     console.log("merged", room2, "ct.room", ct.room, "parent",
-          ct.room.parent);
-
-          //     // room2.
-
-          //     // room2.alpha = 1; // huh?
-
-          //     // ct.stage.
-
-          // }
-
-
-          // // add UI
-
-          // let roomUI = ct.rooms.append('Room_UI');
-
-          // // On-screen joystick?
-
-          // // if (isMobile() || true) {
-
-          // //     ct.vkeys.joystick({
-
-          // //         key: 'Vjoy1',
-
-          // //         tex: 'paper', // TODOTrackPad',
-
-          // //         trackballTex: 'spit', // TODO
-
-          // //         depth: 1000,
-
-          // //         x: 500,
-
-          // //         y: 500,
-
-          // //         container: roomUI
-
-          // //     });
-
-          // // }
-
-
-          // class Layout {
-
-          //     nExit;
-
-          //     sExit;
-
-          //     eExit;
-
-          //     wExit;
-
-          //     tank;
-
-          //     cat;
-
-          // }
-
-
-          // /**
-
-          //  * @returns {Layout}
-
-          //  */
-
-          // function layoutRoom(symbol) {
-
-          //     console.log("layoutRoom", symbol);
-
-          //     assert(symbol, "no symbol");
-
-          //     let oldlayout = layout4symbol[symbol];
-
-          //     if (oldlayout) {
-
-          //         console.log("use oldlayout for "+symbol, oldlayout);
-
-          //         return oldlayout;
-
-          //     }
-
-          //     console.log("make new layout for "+symbol);
-
-          //     let layout = new Layout();
-
-          //     layout.symbol = symbol;
-
-          //     layout4symbol[symbol] = layout;
-
-          //     let corners = "NE NW SE SW".split(" "); 
-
-          //     // match existing doors
-
-          //     let leftSymbol = getNextElementSymbol(symbol, -1, 0);
-
-          //     let upSymbol = getNextElementSymbol(symbol, 0, -1);
-
-          //     if (leftSymbol) {
-
-          //         let leftLayout = layoutRoom(leftSymbol);
-
-          //         assert(leftLayout.eExit, "no eExit", leftSymbol,
-          leftLayout);
-
-          //         layout.wExit = leftLayout.eExit.replace("E","W");
-
-          //         remove(corners, layout.wExit);
-
-          //         console.log(symbol, "has leftSymbol", leftSymbol,
-          layout.wExit);
-
-          //     }
-
-          //     if (upSymbol) {
-
-          //         let upLayout = layoutRoom(upSymbol);
-
-          //         assert(upLayout.sExit, "no sExit in upLayout", upSymbol,
-          upLayout);
-
-          //         layout.nExit = upLayout.sExit.replace("S","N");
-
-          //         remove(corners, layout.nExit);
-
-          //     }
-
-          //     console.log("back to layout",symbol,"corners
-          left",corners.join(", "));
-
-          //     // place the tank
-
-          //     let corner = getRandomMember(corners);
-
-          //     layout.tank = corner;
-
-          //     remove(corners, layout.tank);
-
-          //     // place exits
-
-          //     assert(corners.length);
-
-          //     //
-          console.log(symbol,JSON.stringify(corners),JSON.stringify(layout));
-
-          //     // if ( ! layout.wExit) {
-
-          //     //     let corner = getRandomMember(corners);
-
-          //     //     layout.wExit = corner;
-
-          //     // }
-
-          //     if ( ! layout.eExit) {
-
-          //         let eSymbol = getNextElementSymbol(symbol, 1, 0);
-
-          //         if (eSymbol) {
-
-          //             let corner = getRandomMember(corners.filter(c =>
-          c.includes("E")));
-
-          //             if ( ! corner) {
-
-          //                 console.warn("Must now overlap for E");
-
-          //                 if (layout.nExit && layout.nExit.endsWith("E"))
-          corner = layout.nExit;
-
-          //                 else corner = "SE";
-
-          //             }
-
-          //             layout.eExit = corner;
-
-          //         }
-
-          //     }
-
-          //     // if ( ! layout.nExit) {
-
-          //     //     let corner = getRandomMember(corners);
-
-          //     //     layout.nExit = corner;
-
-          //     // }
-
-          //     if ( ! layout.sExit) {
-
-          //         let sSymbol = getNextElementSymbol(symbol, 0, 1);
-
-          //         if (sSymbol) {
-
-          //             let corner = getRandomMember(corners.filter(c =>
-          c.includes("S")));
-
-          //             if ( ! corner) {
-
-          //                 console.warn("Must now overlap for S");
-
-          //                 if (layout.eExit && layout.eExit.startsWith("S"))
-          corner = layout.eExit;
-
-          //                 else corner = "SW";
-
-          //             }
-
-          //             // assert(corner, "no S corners", corners, symbol+ " to
-          "+sSymbol,"layout",layout);
-
-          //             layout.sExit = corner;
-
-          //         } else {
-
-          //             console.log("no S symbol", symbol, sSymbol);
-
-          //         }
-
-          //     }
-
-          //     if ( ! layout.cat) {
-
-          //         let corner = getRandomMember(corners);
-
-          //         layout.cat = corner;
-
-          //     }
-
-          //     console.log("layout", symbol, layout);
-
-          //     return layout;
-
-          // }
-
-
-          // /** use a fn to avoid memory leaks */
-
-          // function arrangeRoom(room) {
-
-          //     let roomState = roomOptions[room.name];
-
-          //     if ( ! roomState) roomState = roomOptions[room.name] = {};
-
-          //     console.log("arrange", room, "element", room.element, "symbol",
-          room.symbol, "state", roomState);
-
-          //     assert(room.element.symbol, room);
-
-          //     const symbol = room.element.symbol;
-
-          //     let layout = layoutRoom(symbol);
-
-          //     console.log(symbol, layout);
-
-          //     let n = room.element.atomic_number % 4;
-
-          //     console.log("n",n,"element",symbol);
-
-          //     let doors = getTemplates(room, "door");
-
-          //     let manholes = getTemplates(room, "manhole");
-
-          //     let tanks = ct.templates.list['tank-2'].filter(tmp =>
-          tmp.getRoom() === room);
-
-          //     // let cats = ct.templates.list['cat-1'].filter(tmp =>
-          tmp.getRoom() === room);
-
-          //     tanks.forEach(tank => {
-
-          //         let corner = getCompassCorner(tank);
-
-          //         if (layout.tank !== corner) {
-
-          //             console.log("kill tank",corner,"vs layout",layout);
-
-          //             tank.kill = true;
-
-          //         }   
-
-          //     });
-
-          //     console.log("doors",doors);
-
-          //     // exists and locks
-
-          //     manholes.forEach(manhole => {
-
-          //         let cc = getCompassCorner(manhole);
-
-          //         if (layout.nExit === cc || layout.sExit === cc) {
-
-          //             let dy = manhole.y > 200? 1 : -1;
-
-          //             let nextSymbol = getNextElementSymbol(symbol, 0, dy);
-
-          //             if ( ! nextSymbol) manhole.kill = true;
-
-          //             manhole.nextSymbol = nextSymbol;
-
-          //             if (isUnlocked(symbol, nextSymbol)) {
-
-          //                 manhole.unlocked = true;
-
-          //             }
-
-          //         } else {
-
-          //             manhole.kill = true;
-
-          //         }
-
-          //     });
-
-          //     doors.forEach(door => {
-
-          //         let cc = getCompassCorner(door);
-
-          //         if (layout.eExit === cc || layout.wExit === cc) {
-
-          //             let dx = door.x > 200? 1 : -1;
-
-          //             let nextSymbol = getNextElementSymbol(symbol, dx, 0);
-
-          //             door.nextSymbol = nextSymbol;
-
-          //             if (isUnlocked(symbol, nextSymbol)) {
-
-          //                 door.unlocked = true;
-
-          //             }
-
-          //         } else {
-
-          //             door.kill = true;
-
-          //         }
-
-          //     });
-
-
-          //     // for(let i=1; i<cats.length; i++) {
-
-          //     //     cats[i].kill = true;
-
-          //     // }
-
-
-          //     // Place the chimp    
-
-          //     if (roomState.playerx) {
-
-          //         let chimp = getTemplates(room, "chimp")[0];
-
-          //         if (chimp) { // paranoia (maybe the chimp got killed)
-
-          //             chimp.x = roomState.playerx;
-
-          //             chimp.y = roomState.playery;
-
-          //         }
-
-          //     }
-
-          // };
-
-          // arrangeRoom(this);
-        arguments: {}
-        lib: core
-    uid: kq5mbjRprBW89L
+    lastmod: 1704576315856
+    events: []
+    uid: wMdLPHLcQRtwd3
 actions:
   - name: Press
     methods:
@@ -10236,7 +9460,7 @@ emitterTandems:
     type: tandem
 scripts:
   - name: utils
-    code: "\nlet seed = Math.floor(Math.random()*1000);\n\nconst random = ct.random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return random() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(random()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/**\n * for consuming Esc keypresses\n */\nlet lastEsc = 0;\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nUI = {};\n\nfunction assert(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n\n\nasync function pause(msecs) {\n    let p = ct.timer.add(msecs);\n    await p;\n}\n\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return ct.templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    assert( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        assert(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text, options={}) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = ct.templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.x = ct.room.width / 3;\n    pTextBlock.width = ct.room.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    ct.timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (this.pTooltip) {\n        if (this.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    this.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if (this.pTooltip) {\n        this.pTooltip.destroy();\n        this.pTooltip = null;\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    assert(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = ct.styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    assert(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n/**\n * @param {PIXI.Sprite} pSprite\n * @param {Chat|string} chat\n */\nfunction doTalk(pSprite, chat) {\n    if (typeof(chat)===\"string\") {\n        chat = new Chat(chat); // convert\n    }\n    if (pSprite.pTalkToMe) {\n        pSprite.pTalkToMe.kill = true;\n        pSprite.pTalkToMe = null;\n    }\n    // cat sound?\n    if (chat.sound && ! chat.soundPlayed) {\n        chat.soundPlayed = true;\n        ct.sound.spawn(chat.sound, {volume:0.5});\n    }\n\n    // chain async calls to step through the text\n    const control = {};\n    let p = null;\n    chat.lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    // talking promise\n    p = p.then(() => { \n        pSprite.talking = null; \n        console.log(\"null talking\",pSprite.pSpeechBubble);\n    });\n    assert(p);\n    pSprite.talking = p;\n    // follow on action - like move room?\n    if (chat.then) {\n        p = p.then(chat.then);\n    }\n    return p;\n}\n\nasync function doTalk2(pSprite, chatLine, control) {\n    const text = chatLine.text;\n    assert(text, chatLine);\n    if (control.stop) {\n        console.log(\"stop talking\", chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }    \n    let sx = pSprite.x-20;\n    let sy = pSprite.y - pSprite.height;\n    if (sy < 200) {\n        console.log(\"shift left\");\n        sy = 220;\n        sx -= 50;\n    }    \n    pSprite.pSpeechBubble = ct.templates.copyIntoRoom(\"speech-bubble\", sx, sy, ct.room);\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth}); //verticalCenter:true\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n    console.log(\"pSprite.pSpeechBubble\", pSprite.pSpeechBubble, sx, sy);\n\n    var timer = ct.timer.add(msecs,'talk');\n    let promise = timer.then(() => {\n        chatLine.done = true;\n        console.log(\"done \"+text, chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\nfunction offerTalk(pSprite) {\n    if (pSprite.pTalkToMe || pSprite.pSpeechBubble) return;\n    if (this.chat && this.chat.lines.find(line => ! line.done)) {\n        if ( ! this.pTalkToMe) {\n            this.pTalkToMe = ct.templates.copy(\"speech-bubble\", -5, -this.height -5);\n            this.addChild(this.pTalkToMe);\n            this.pTalkToMe.scale.x = 0.25;\n            this.pTalkToMe.scale.y = 0.25;            \n        }\n        this.pTalkToMe.visible = true;\n        this.pTalkToMe.alpha = 0.75;\n    }    \n}\n\nlet lastMove = new Date().getTime() - 2000;\nlet moving = false;\n\n/**\n  HACK: set playerx, playery for the room you are _leaving_\n * @param {!string} roomName * no-op if already in the room AND options arent modified\n * @param {?Object} options update state for roomName\n * @param {?Object} moveOptions {transition:none|??}\n */\nfunction moveRoom(roomName, options, moveOptions) {\n    console.error(\"moveRoom\",roomName, options,moveOptions); // for debug\n    if (moving) return; // no overlaps\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    if (ct.room.name === roomName) { // paranoia\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = options && Object.entries(options).find(([k,v]) => ro[k] !== v);\n        if ( ! mod) {\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n        console.log(\"moveRoom\",roomName, \"mod\",mod);\n    }\n    // anti-flicker\n    lastMove = new Date().getTime();\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // stash player x/y on the leaving room\n    // NB: If we move from Room_PLatformer X to Room_PLatformer Y -- the later updateRoomState can set x or y\n    let player = getPlayer();\n    if (player) {\n        let leaveState = {playerx: player.x, playery: player.y};\n        updateRoomState(ct.room.name, leaveState);\n    }\n    const moveRoom2 = () => {\n        moving = false;\n        // // close modal?\n        // if (UI.modal) {\n        //     ct.rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        ct.rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            updateRoomState(roomName, options);\n        }\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    moving = true;\n    ct.transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(ct.room, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction remove(array, item) {\n    assert(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    assert(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};\n\n/**\n * Fix bug (dec 2023) where scale is ignored\n */\nfunction getBounds(pSprite) {\n    if ( ! pSprite.shape) {\n        console.log(\"no shape\",pSprite);\n        return pSprite.getBounds();\n    }\n\tlet h = pSprite.height;\n\tlet w = pSprite.width;\n\tlet {left,right,top,bottom, type, r} = pSprite.shape;\n\t// scale\n\tif (pSprite.scale.y) {\n\t\ttop *= pSprite.scale.y;\n\t\tbottom *= pSprite.scale.y;\n\t\tr *= pSprite.scale.y;\n\t}\n\tif (pSprite.scale.x) {\n\t\tleft *= pSprite.scale.x;\n\t\tright *= pSprite.scale.x;\n\t}\n\tlet b1;\n\tif (type===\"circle\") {\n\t\tb1 = {\n\t\t\tx: pSprite.x - r, \n\t\t\ty: pSprite.y - r,\n\t\t\twidth: 2*r, \n\t\t\theight: 2*r\n\t\t};\n\t} else {\n\t\tb1 = {\n\t\t\tx: pSprite.x - left, \n\t\t\ty: pSprite.y - top,\n\t\t\twidth: right - left, //;left - right, \n\t\t\theight: top - bottom\n\t\t};\n\t}\n\tassert(b1.height >= -0.1, b1); // allow maths precision\n\tassert(b1.width >= -0.1, b1);\n    // console.log(\"boundsshape\",pSprite);\n    return b1;\n}\n\n\nlet pg1, pg2;\n/**\n * @returns {boolean} box collision test\n */\nfunction testBoxCollision(bounds1, bounds2)\n{\n    console.log(\"testBoxCollision\",bounds1, bounds2);\n    let hit = bounds1.x < bounds2.x + bounds2.width\n        && bounds1.x + bounds1.width > bounds2.x\n        && bounds1.y < bounds2.y + bounds2.height\n        && bounds1.y + bounds1.height > bounds2.y;\n        // debug\n    // if ( ! this.pg1) {\n    //     let pg1 = new PIXI.Graphics();\n    //     this.pg1 = pg1;\n    //     ct.room.addChild(this.pg1);            \n    //     let pg2 = new PIXI.Graphics();\n    //     this.pg2 = pg2;\n    //     ct.room.addChild(this.pg2);            \n    // }\n    // this.pg1.clear();\n    // this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);\n    // this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);\n    // this.pg1.beginFill(0xCCFFCC,1);\n    // this.pg1.drawCircle(bounds1.x, bounds1.y, 3);\n\n    // this.pg2.clear();\n    // this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);\n    // this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);\n    // this.pg2.beginFill(0xCCCCFF,1);\n    // this.pg2.drawCircle(bounds2.x, bounds2.y, 3);\n\n    return hit;\n}\n\n// override to put in on/off control\nconst _spawn = ct.sound.spawn;\nct.sound.spawn = function soundSpawn(name, options, callback) {\n    if (getOption(\"sound\")) {\n        _spawn(name, options, callback);\n    } else if (callback) {\n        // better do the callback anyway, after a short pause\n        ct.timer.add(250).then(callback);\n    }\n}\nlet MUSIC_VOLUME = 0.5;\nfunction musicSpawn(name, options={}, callback) {\n    musicOff();\n    if (getOption(\"music\")) {\n        if ( ! options.volume) options.volume = MUSIC_VOLUME;\n        let musicAudio = ct.sound.spawn(name, options, callback);\n        console.log(\"musicAudio\",musicAudio);\n    }\n}\nfunction musicOff() {\n    try {\n        Object.values(ct.res.sounds).forEach(snd => snd.stop());\n    } catch(paranoia) {\n        console.error(paranoia);\n    }\n}\n\n\nasync function pulse(pSprite, tint=0x9999ff, pChimp) {\n    if (pSprite._pulse) return;    \n    // pSprite._pulse = new Date().getTime(); // tween??\n    try {\n        pSprite.tint = tint;\n        await pause(200);\n        while(pChimp && ct.place.collide(pChimp, pSprite)) {\n            await pause(100);\n        }\n        pSprite.tint = 0xffffff;\n        pSprite._pulse = null;\n    } catch(ohwell) {\n        // console.log(\"(skip) pulse error\",ohwell); // harmless\n    }\n};\n    // console.log(\"pulse!\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint\n    //     }        \n    // });\n    // await pSprite._pulse; \n    // console.log(\"pulse 2\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint: 0xffffff\n    //     }        \n    // });        \n    // await pSprite._pulse;\n    // pSprite._pulse = null;\n    // console.log(\"pulse done\");\n\n// HACK fix bug Jan 2024\nconst _onDestroy = ct.templates.onDestroy;\nfunction od2(args) {    \n    console.warn(\"onDestroy this\", this, args);\n    try {\n        _onDestroy.apply(this, args);\n    } catch(wtf) {\n        console.error(\"onDestroy\", wtf, this);\n    }\n};\nct.templates.onDestroy = od2;"
+    code: "\nlet seed = Math.floor(Math.random()*1000);\n\nconst random = ct.random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return random() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(random()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/**\n * for consuming Esc keypresses\n */\nlet lastEsc = 0;\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nUI = {};\n\nfunction assert(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n\n\nasync function pause(msecs) {\n    let p = ct.timer.add(msecs);\n    await p;\n}\n\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return ct.templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\n/**\n * Like addText but idempotent. Sets pBlock.pText\n */\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    assert( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        assert(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text, options={}) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = ct.templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.x = ct.room.width / 3;\n    pTextBlock.width = ct.room.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    ct.timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (this.pTooltip) {\n        if (this.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    this.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if (this.pTooltip) {\n        this.pTooltip.destroy();\n        this.pTooltip = null;\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\n/**\n * @returns {PIXI.Text} pText\n */\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    assert(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = ct.styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    assert(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n/**\n * @param {PIXI.Sprite} pSprite\n * @param {Chat|string} chat\n */\nfunction doTalk(pSprite, chat) {\n    if (typeof(chat)===\"string\") {\n        chat = new Chat(chat); // convert\n    }\n    if (pSprite.pTalkToMe) {\n        pSprite.pTalkToMe.kill = true;\n        pSprite.pTalkToMe = null;\n    }\n    // cat sound?\n    if (chat.sound && ! chat.soundPlayed) {\n        chat.soundPlayed = true;\n        ct.sound.spawn(chat.sound, {volume:0.5});\n    }\n\n    // chain async calls to step through the text\n    const control = {};\n    let p = null;\n    chat.lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    // talking promise\n    p = p.then(() => { \n        pSprite.talking = null; \n        console.log(\"null talking\",pSprite.pSpeechBubble);\n    });\n    assert(p);\n    pSprite.talking = p;\n    // follow on action - like move room?\n    if (chat.then) {\n        p = p.then(chat.then);\n    }\n    return p;\n}\n\nasync function doTalk2(pSprite, chatLine, control) {\n    const text = chatLine.text;\n    assert(text, chatLine);\n    if (control.stop) {\n        console.log(\"stop talking\", chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }    \n    let sx = pSprite.x-20;\n    let sy = pSprite.y - pSprite.height;\n    if (sy < 200) {\n        console.log(\"shift left\");\n        sy = 220;\n        sx -= 50;\n    }    \n    pSprite.pSpeechBubble = ct.templates.copyIntoRoom(\"speech-bubble\", sx, sy, ct.room);\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth}); //verticalCenter:true\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n    // console.log(\"pSprite.pSpeechBubble\", pSprite.pSpeechBubble, sx, sy);\n\n    var timer = ct.timer.add(msecs,'talk');\n    let promise = timer.then(() => {\n        chatLine.done = true;\n        // console.log(\"done \"+text, chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\nfunction offerTalk(pSprite) {\n    if (pSprite.pTalkToMe || pSprite.pSpeechBubble) return;\n    if (this.chat && this.chat.lines.find(line => ! line.done)) {\n        if ( ! this.pTalkToMe) {\n            this.pTalkToMe = ct.templates.copy(\"speech-bubble\", -5, -this.height -5);\n            this.addChild(this.pTalkToMe);\n            this.pTalkToMe.scale.x = 0.25;\n            this.pTalkToMe.scale.y = 0.25;            \n        }\n        this.pTalkToMe.visible = true;\n        this.pTalkToMe.alpha = 0.75;\n    }    \n}\n\nlet lastMove = new Date().getTime() - 2000;\nlet moving = false;\n\n/**\n  HACK: set playerx, playery for the room you are _leaving_\n * @param {!string} roomName * no-op if already in the room AND options arent modified\n * @param {?Object} options update state for roomName\n * @param {?Object} moveOptions {transition:none|??}\n */\nfunction moveRoom(roomName, options, moveOptions) {\n    console.error(\"moveRoom\",roomName, options,moveOptions); // for debug\n    if (moving) return; // no overlaps\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    if (ct.room.name === roomName) { // paranoia\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = options && Object.entries(options).find(([k,v]) => ro[k] !== v);\n        if ( ! mod) {\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n        console.log(\"moveRoom\",roomName, \"mod\",mod);\n    }\n    // anti-flicker\n    lastMove = new Date().getTime();\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // stash player x/y on the leaving room\n    // NB: If we move from Room_PLatformer X to Room_PLatformer Y -- the later updateRoomState can set x or y\n    let player = getPlayer();\n    if (player) {\n        let leaveState = {playerx: player.x, playery: player.y};\n        updateRoomState(ct.room.name, leaveState);\n    }\n    const moveRoom2 = () => {\n        moving = false;\n        // // close modal?\n        // if (UI.modal) {\n        //     ct.rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        ct.rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            updateRoomState(roomName, options);\n        }\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    moving = true;\n    ct.transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(ct.room, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction remove(array, item) {\n    assert(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    assert(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};\n\n/**\n * Fix bug (dec 2023) where scale is ignored\n */\nfunction getBounds(pSprite) {\n    if ( ! pSprite.shape) {\n        console.log(\"no shape\",pSprite);\n        return pSprite.getBounds();\n    }\n\tlet h = pSprite.height;\n\tlet w = pSprite.width;\n\tlet {left,right,top,bottom, type, r} = pSprite.shape;\n\t// scale\n\tif (pSprite.scale.y) {\n\t\ttop *= pSprite.scale.y;\n\t\tbottom *= pSprite.scale.y;\n\t\tr *= pSprite.scale.y;\n\t}\n\tif (pSprite.scale.x) {\n\t\tleft *= pSprite.scale.x;\n\t\tright *= pSprite.scale.x;\n\t}\n\tlet b1;\n\tif (type===\"circle\") {\n\t\tb1 = {\n\t\t\tx: pSprite.x - r, \n\t\t\ty: pSprite.y - r,\n\t\t\twidth: 2*r, \n\t\t\theight: 2*r\n\t\t};\n\t} else {\n\t\tb1 = {\n\t\t\tx: pSprite.x - left, \n\t\t\ty: pSprite.y - top,\n\t\t\twidth: right - left, //;left - right, \n\t\t\theight: top - bottom\n\t\t};\n\t}\n\tassert(b1.height >= -0.1, b1); // allow maths precision\n\tassert(b1.width >= -0.1, b1);\n    // console.log(\"boundsshape\",pSprite);\n    return b1;\n}\n\n\nlet pg1, pg2;\n/**\n * @returns {boolean} box collision test\n */\nfunction testBoxCollision(bounds1, bounds2)\n{\n    console.log(\"testBoxCollision\",bounds1, bounds2);\n    let hit = bounds1.x < bounds2.x + bounds2.width\n        && bounds1.x + bounds1.width > bounds2.x\n        && bounds1.y < bounds2.y + bounds2.height\n        && bounds1.y + bounds1.height > bounds2.y;\n        // debug\n    // if ( ! this.pg1) {\n    //     let pg1 = new PIXI.Graphics();\n    //     this.pg1 = pg1;\n    //     ct.room.addChild(this.pg1);            \n    //     let pg2 = new PIXI.Graphics();\n    //     this.pg2 = pg2;\n    //     ct.room.addChild(this.pg2);            \n    // }\n    // this.pg1.clear();\n    // this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);\n    // this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);\n    // this.pg1.beginFill(0xCCFFCC,1);\n    // this.pg1.drawCircle(bounds1.x, bounds1.y, 3);\n\n    // this.pg2.clear();\n    // this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);\n    // this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);\n    // this.pg2.beginFill(0xCCCCFF,1);\n    // this.pg2.drawCircle(bounds2.x, bounds2.y, 3);\n\n    return hit;\n}\n\n// override to put in on/off control\nconst _spawn = ct.sound.spawn;\nct.sound.spawn = function soundSpawn(name, options, callback) {\n    if (getOption(\"sound\")) {\n        _spawn(name, options, callback);\n    } else if (callback) {\n        // better do the callback anyway, after a short pause\n        ct.timer.add(400).then(callback);\n    }\n}\nlet MUSIC_VOLUME = 0.5;\nfunction musicSpawn(name, options={}, callback) {\n    musicOff();\n    if (getOption(\"music\")) {\n        if ( ! options.volume) options.volume = MUSIC_VOLUME;\n        let musicAudio = ct.sound.spawn(name, options, callback);\n        console.log(\"musicAudio\",musicAudio);\n    }\n}\nfunction musicOff() {\n    try {\n        Object.values(ct.res.sounds).forEach(snd => snd.stop());\n    } catch(paranoia) {\n        console.error(paranoia);\n    }\n}\n\n\nasync function pulse(pSprite, tint=0x9999ff, pChimp) {\n    if (pSprite._pulse) return;    \n    // pSprite._pulse = new Date().getTime(); // tween??\n    try {\n        pSprite.tint = tint;\n        await pause(200);\n        while(pChimp && ct.place.collide(pChimp, pSprite)) {\n            await pause(100);\n        }\n        pSprite.tint = 0xffffff;\n        pSprite._pulse = null;\n    } catch(ohwell) {\n        // console.log(\"(skip) pulse error\",ohwell); // harmless\n    }\n};\n    // console.log(\"pulse!\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint\n    //     }        \n    // });\n    // await pSprite._pulse; \n    // console.log(\"pulse 2\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint: 0xffffff\n    //     }        \n    // });        \n    // await pSprite._pulse;\n    // pSprite._pulse = null;\n    // console.log(\"pulse done\");\n\n// HACK fix bug Jan 2024\nconst _onDestroy = ct.templates.onDestroy;\nfunction od2(args) {    \n    // console.warn(\"onDestroy this\", this, args);\n    try {\n        _onDestroy.apply(this, args);\n    } catch(wtf) {\n        console.error(\"onDestroy\", wtf, this);\n    }\n};\nct.templates.onDestroy = od2;"
   - name: element-info
     code: |-
 
@@ -11237,6 +10461,9 @@ scripts:
           if (chimp.dying) return;
           chimp.dying = true;
           let target = Math.PI / 2;
+          chimp.dy = 0;
+          chimp.dx = 0;
+          let roomName = ct.room.name;
           // let targetX = this.x + 100;
           ct.tween.add({
               obj: chimp,
@@ -11246,6 +10473,17 @@ scripts:
               duration: 1000
           }).then(() => {
               chimp.kill = true;
+              let uiRoom = ct.rooms.list.Room_UI[0];        
+              assert(uiRoom);        
+              ct.room.alpha = 0.7;
+              let pRestart = ct.templates.copyIntoRoom("button", 0, 0, uiRoom);
+              console.log("uiRoom", uiRoom.width, uiRoom.height, uiRoom);
+              pRestart.text = "Restart Room?"
+              pRestart.x = (uiRoom.width - pRestart.width)/2 - 100; // - to adjust for the infobar
+              pRestart.y = (uiRoom.height - pRestart.height)/2;
+              pRestart.doClick = () => {
+                  moveRoom(roomName, {restart:Math.random()});
+              };
           });
           ct.sound.spawn("MonkeyDies",{volume:0.1});
       }
