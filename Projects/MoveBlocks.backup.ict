@@ -62,6 +62,10 @@ libs:
     gridY: 512
     debugMode: false
     debugText: 16
+  sound.howler:
+    defaultMaxDistance: 2500
+    useDepth: false
+    manageListenerPosition: false
 textures:
   - name: Tileset
     untill: 0
@@ -4445,6 +4449,77 @@ templates:
     lastmod: 1705522882579
     uid: 1pBF4L6tGkhfB5
 sounds:
+  - name: Wood_Start
+    uid: 42e768ce-6c19-4c34-9f14-11e257ecff18
+    origname: s42e768ce-6c19-4c34-9f14-11e257ecff18.ogg
+    lastmod: 1602211510307
+  - name: Wood_End
+    uid: 55aa6dac-1071-4725-bdc8-b68d98ac72bf
+    origname: s55aa6dac-1071-4725-bdc8-b68d98ac72bf.ogg
+    lastmod: 1602211530441
+  - name: Success
+    uid: 2e225de2-b896-4a53-a302-4d2b7ad26dee
+    origname: s2e225de2-b896-4a53-a302-4d2b7ad26dee.ogg
+    lastmod: 1602212139829
+  - name: MonkeyDies
+    uid: GhgcHm6p3N8nW3
+    isMusic: false
+    type: sound
+    lastmod: 1701015691286
+    poolSize: 5
+    group: !<tag:yaml.org,2002:js/undefined> ''
+    origname: sGhgcHm6p3N8nW3.mp3
+  - name: Stomp
+    uid: FkmwDBHN1P7Gkc
+    isMusic: false
+    type: sound
+    lastmod: 1701016117087
+    poolSize: 5
+    group: !<tag:yaml.org,2002:js/undefined> ''
+    origname: sFkmwDBHN1P7Gkc.mp3
+  - name: ChaChing
+    uid: jR18GJwt6t2hbb
+    isMusic: false
+    type: sound
+    lastmod: 1701432477316
+    poolSize: 5
+    origname: sjR18GJwt6t2hbb.ogg
+  - name: Sound_Squeaky_Open
+    uid: 9GCpfG61H52j9q
+    isMusic: false
+    type: sound
+    lastmod: 1701431856527
+    poolSize: 5
+    origname: s9GCpfG61H52j9q.ogg
+  - name: Sound_Nope
+    uid: hF2fkN6mKc2zR2
+    isMusic: false
+    type: sound
+    lastmod: 1701906172389
+    poolSize: 5
+    origname: shF2fkN6mKc2zR2.mp3
+  - name: Sound_Chug
+    uid: rfGLCnHbr8dmD4
+    isMusic: false
+    type: sound
+    lastmod: 1701906199634
+    poolSize: 5
+    origname: srfGLCnHbr8dmD4.mp3
+  - name: Sound_Cat
+    uid: tCT1qGCKBD5Mrq
+    isMusic: false
+    type: sound
+    lastmod: 1702498658148
+    poolSize: 5
+    group: !<tag:yaml.org,2002:js/undefined> ''
+    origname: stCT1qGCKBD5Mrq.mp3
+  - name: Music-Brass
+    uid: PwrRmDW9532N1T
+    isMusic: true
+    type: sound
+    lastmod: 1704040887642
+    poolSize: 5
+    origname: sPwrRmDW9532N1T.mp3
 styles:
   - name: Style_Score
     uid: 8BbjGqjKRBjMww
