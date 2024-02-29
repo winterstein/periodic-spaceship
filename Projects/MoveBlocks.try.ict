@@ -1,4 +1,4 @@
-ctjsVersion: 4.0.1
+ctjsVersion: 4.0.2
 notes: >
   /*
 
@@ -43,6 +43,17 @@ libs:
     gridY: 512
     debugMode: false
     debugText: 16
+  sprite:
+    spritedef: |-
+      sprite(
+                'snake-spit', 'snake-spitting', [0, 1, 1, 2, 2, 1, 1, 0]
+            );
+      sprite(
+                'snake-3', 'snake-slither', [0, 1]
+            );
+      sprite(
+                'snake-3', 'snake-slither-die', [2]
+            );
 actions:
   - name: Press
     methods:
@@ -80,7 +91,7 @@ actions:
       - code: keyboard.Space
 scripts:
   - name: utils
-    code: "\ndebugger; // does nothing\n\nlet seed = Math.floor(Math.random()*1000);\n\nconst randomizer = random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return randomizer() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(randomizer()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/**\n * for consuming Esc keypresses\n */\nlet lastEsc = 0;\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nUI = {};\n\nfunction check(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n\n\nasync function pause(msecs) {\n    let p = timer.add(msecs);\n    await p;\n}\n\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\n/**\n * Like addText but idempotent. Sets pBlock.pText\n */\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    check( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        check(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text, options={}) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.x = rooms.current.width / 3;\n    pTextBlock.width = rooms.current.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (this.pTooltip) {\n        if (this.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    this.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if (this.pTooltip) {\n        this.pTooltip.destroy();\n        this.pTooltip = null;\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\n/**\n * @returns {PIXI.Text} pText\n */\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    check(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    check(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n/**\n * @param {PIXI.Sprite} pSprite\n * @param {Chat|string} chat\n */\nfunction doTalk(pSprite, chat) {\n    if (typeof(chat)===\"string\") {\n        chat = new Chat(chat); // convert\n    }\n    if (pSprite.pTalkToMe) {\n        pSprite.pTalkToMe.kill = true;\n        pSprite.pTalkToMe = null;\n    }\n    // cat sound?\n    if (chat.sound && ! chat.soundPlayed) {\n        chat.soundPlayed = true;\n        sounds.play(chat.sound, {volume:0.5});\n    }\n\n    // chain async calls to step through the text\n    const control = {};\n    let p = null;\n    chat.lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    // talking promise\n    p = p.then(() => { \n        pSprite.talking = null; \n        console.log(\"null talking\",pSprite.pSpeechBubble);\n    });\n    check(p);\n    pSprite.talking = p;\n    // follow on action - like move room?\n    if (chat.then) {\n        p = p.then(chat.then);\n    }\n    return p;\n}\n\nasync function doTalk2(pSprite, chatLine, control) {\n    const text = chatLine.text;\n    check(text, chatLine);\n    if (control.stop) {\n        console.log(\"stop talking\", chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }    \n    let sx = pSprite.x-20;\n    let sy = pSprite.y - pSprite.height;\n    if (sy < 200) {\n        console.log(\"shift left\");\n        sy = 220;\n        sx -= 50;\n    }    \n    pSprite.pSpeechBubble = templates.copyIntoRoom(\"speech-bubble\", sx, sy, rooms.current);\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth}); //verticalCenter:true\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n    // console.log(\"pSprite.pSpeechBubble\", pSprite.pSpeechBubble, sx, sy);\n\n    var ttimer = timer.add(msecs,'talk');\n    let promise = ttimer.then(() => {\n        chatLine.done = true;\n        // console.log(\"done \"+text, chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\nfunction offerTalk(pSprite) {\n    if (pSprite.pTalkToMe || pSprite.pSpeechBubble) return;\n    if (this.chat && this.chat.lines.find(line => ! line.done)) {\n        if ( ! this.pTalkToMe) {\n            this.pTalkToMe = templates.copy(\"speech-bubble\", -5, -this.height -5);\n            this.addChild(this.pTalkToMe);\n            this.pTalkToMe.scale.x = 0.25;\n            this.pTalkToMe.scale.y = 0.25;            \n        }\n        this.pTalkToMe.visible = true;\n        this.pTalkToMe.alpha = 0.75;\n    }    \n}\n\nlet lastMove = new Date().getTime() - 2000;\nlet moving = false;\n\n/**\n  HACK: set playerx, playery for the room you are _leaving_\n * @param {!string} roomName * no-op if already in the room AND options arent modified\n * @param {?Object} options update state for roomName\n * @param {?Object} moveOptions {transition:none|??}\n */\nfunction moveRoom(roomName, options, moveOptions) {\n    console.error(\"moveRoom\",roomName, options,moveOptions); // for debug\n    if (moving) return; // no overlaps\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    if (rooms.current.name === roomName) { // paranoia\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = options && Object.entries(options).find(([k,v]) => ro[k] !== v);\n        if ( ! mod) {\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n        console.log(\"moveRoom\",roomName, \"mod\",mod);\n    }\n    // anti-flicker\n    lastMove = new Date().getTime();\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // stash player x/y on the leaving room\n    // NB: If we move from Room_PLatformer X to Room_PLatformer Y -- the later updateRoomState can set x or y\n    let player = getPlayer();\n    if (player) {\n        let leaveState = {playerx: player.x, playery: player.y};\n        updateRoomState(rooms.current.name, leaveState);\n    }\n    const moveRoom2 = () => {\n        moving = false;\n        // // close modal?\n        // if (UI.modal) {\n        //     rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            updateRoomState(roomName, options);\n        }\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    moving = true;\n    transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(rooms.current, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction doKillMonster(pSnake) {\n    if (pSnake.dying) return;\n    pSnake.depth = 100;\n    pSnake.dying = true;\n    pSnake.dx = 0;\n    if (pSnake.dieTex) pSnake.tex = pSnake.dieTex;\n    pSnake.play(); \n    let smaller = pSnake.scale.y * 0.8;\n    ct.tween.add({\n        obj:pSnake.scale,\n        duration:300,\n        fields: {\n            y: smaller,\n            x: smaller\n        }\n    }).then(() => pSnake.kill = true);\n}\n\nfunction remove(array, item) {\n    check(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    check(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};\n\n/**\n * Fix bug (dec 2023) where scale is ignored\n */\nfunction getBounds(pSprite) {\n    if ( ! pSprite.shape) {\n        console.log(\"no shape\",pSprite);\n        return pSprite.getBounds();\n    }\n\tlet h = pSprite.height;\n\tlet w = pSprite.width;\n\tlet {left,right,top,bottom, type, r} = pSprite.shape;\n\t// scale\n\tif (pSprite.scale.y) {\n\t\ttop *= pSprite.scale.y;\n\t\tbottom *= pSprite.scale.y;\n\t\tr *= pSprite.scale.y;\n\t}\n\tif (pSprite.scale.x) {\n\t\tleft *= pSprite.scale.x;\n\t\tright *= pSprite.scale.x;\n\t}\n\tlet b1;\n\tif (type===\"circle\") {\n\t\tb1 = {\n\t\t\tx: pSprite.x - r, \n\t\t\ty: pSprite.y - r,\n\t\t\twidth: 2*r, \n\t\t\theight: 2*r\n\t\t};\n\t} else {\n\t\tb1 = {\n\t\t\tx: pSprite.x - left, \n\t\t\ty: pSprite.y - top,\n\t\t\twidth: right - left, //;left - right, \n\t\t\theight: top - bottom\n\t\t};\n\t}\n\tcheck(b1.height >= -0.1, b1); // allow maths precision\n\tcheck(b1.width >= -0.1, b1);\n    // console.log(\"boundsshape\",pSprite);\n    return b1;\n}\n\n\nlet pg1, pg2;\n/**\n * @returns {boolean} box collision test\n */\nfunction testBoxCollision(bounds1, bounds2)\n{\n    console.log(\"testBoxCollision\",bounds1, bounds2);\n    let hit = bounds1.x < bounds2.x + bounds2.width\n        && bounds1.x + bounds1.width > bounds2.x\n        && bounds1.y < bounds2.y + bounds2.height\n        && bounds1.y + bounds1.height > bounds2.y;\n        // debug\n    // if ( ! this.pg1) {\n    //     let pg1 = new PIXI.Graphics();\n    //     this.pg1 = pg1;\n    //     rooms.current.addChild(this.pg1);            \n    //     let pg2 = new PIXI.Graphics();\n    //     this.pg2 = pg2;\n    //     rooms.current.addChild(this.pg2);            \n    // }\n    // this.pg1.clear();\n    // this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);\n    // this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);\n    // this.pg1.beginFill(0xCCFFCC,1);\n    // this.pg1.drawCircle(bounds1.x, bounds1.y, 3);\n\n    // this.pg2.clear();\n    // this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);\n    // this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);\n    // this.pg2.beginFill(0xCCCCFF,1);\n    // this.pg2.drawCircle(bounds2.x, bounds2.y, 3);\n\n    return hit;\n}\n\n// override to put in on/off control\nconst _spawn = sounds.play;\nsounds.play = function soundSpawn(name, options, callback) {\n    if (getOption(\"sound\")) {\n        _spawn(name, options, callback);\n    } else if (callback) {\n        // better do the callback anyway, after a short pause\n        timer.add(400).then(callback);\n    }\n}\nlet MUSIC_VOLUME = 0.5;\nfunction musicSpawn(name, options={}, callback) {\n    musicOff();\n    if (getOption(\"music\")) {\n        if ( ! options.volume) options.volume = MUSIC_VOLUME;\n        let musicAudio = sounds.play(name, options, callback);\n        console.log(\"musicAudio\",musicAudio);\n    }\n}\nfunction musicOff() {\n    try {\n        sounds.stop();\n        // Object.values(res.sounds).forEach(snd => snd.stop());\n    } catch(paranoia) {\n        console.error(paranoia);\n    }\n}\n\n\nasync function pulse(pSprite, tint=0x9999ff, pChimp) {\n    if (pSprite._pulse) return;    \n    // pSprite._pulse = new Date().getTime(); // tween??\n    try {\n        pSprite.tint = tint;\n        await pause(200);\n        while(pChimp && place.collide(pChimp, pSprite)) {\n            await pause(100);\n        }\n        pSprite.tint = 0xffffff;\n        pSprite._pulse = null;\n    } catch(ohwell) {\n        // console.log(\"(skip) pulse error\",ohwell); // harmless\n    }\n};\n    // console.log(\"pulse!\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint\n    //     }        \n    // });\n    // await pSprite._pulse; \n    // console.log(\"pulse 2\");\n    // pSprite._pulse = ct.tween.add({\n    //     obj:pSprite,\n    //     duration:1000,\n    //     fields: {\n    //         tint: 0xffffff\n    //     }        \n    // });        \n    // await pSprite._pulse;\n    // pSprite._pulse = null;\n    // console.log(\"pulse done\");\n\n// HACK fix bug Jan 2024\nconst _onDestroy = templates.onDestroy;\nfunction od2(args) {    \n    // console.warn(\"onDestroy this\", this, args);\n    try {\n        _onDestroy.apply(this, args);\n    } catch(wtf) {\n        console.error(\"onDestroy\", wtf, this);\n    }\n};\ntemplates.onDestroy = od2;"
+    code: "\ndebugger; // does nothing\n\nlet seed = Math.floor(Math.random()*1000);\n\nconst randomizer = random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return randomizer() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(randomizer()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/**\n * for consuming Esc keypresses\n */\nlet lastEsc = 0;\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nUI = {};\n\nfunction check(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n\n\nasync function pause(msecs) {\n    let p = timer.add(msecs);\n    await p;\n}\n\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\n/**\n * Like addText but idempotent. Sets pBlock.pText\n */\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    check( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        check(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text, options={}) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.x = rooms.current.width / 3;\n    pTextBlock.width = rooms.current.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (this.pTooltip) {\n        if (this.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    this.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if ( ! this.pTooltip) return;\n    try {        \n        this.pTooltip.destroy();\n        this.pTooltip = null;        \n    } catch(err) {  // swallow any error\n        console.warn(err);\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\n/**\n * @returns {PIXI.Text} pText\n */\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    check(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    check(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n/**\n * @param {PIXI.Sprite} pSprite\n * @param {Chat|string} chat\n */\nfunction doTalk(pSprite, chat) {\n    if (typeof(chat)===\"string\") {\n        chat = new Chat(chat); // convert\n    }\n    if (pSprite.pTalkToMe) {\n        pSprite.pTalkToMe.kill = true;\n        pSprite.pTalkToMe = null;\n    }\n    // cat sound?\n    if (chat.sound && ! chat.soundPlayed) {\n        chat.soundPlayed = true;\n        sounds.play(chat.sound, {volume:0.5});\n    }\n\n    // chain async calls to step through the text\n    const control = {};\n    let p = null;\n    chat.lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    // talking promise\n    p = p.then(() => { \n        pSprite.talking = null; \n        console.log(\"null talking\",pSprite.pSpeechBubble);\n    });\n    check(p);\n    pSprite.talking = p;\n    // follow on action - like move room?\n    if (chat.then) {\n        p = p.then(chat.then);\n    }\n    return p;\n}\n\nasync function doTalk2(pSprite, chatLine, control) {\n    const text = chatLine.text;\n    check(text, chatLine);\n    if (control.stop) {\n        console.log(\"stop talking\", chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }    \n    let sx = pSprite.x-20;\n    let sy = pSprite.y - pSprite.height;\n    if (sy < 200) {\n        console.log(\"shift left\");\n        sy = 220;\n        sx -= 50;\n    }    \n    pSprite.pSpeechBubble = templates.copyIntoRoom(\"speech-bubble\", sx, sy, rooms.current);\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth}); //verticalCenter:true\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n    // console.log(\"pSprite.pSpeechBubble\", pSprite.pSpeechBubble, sx, sy);\n\n    var ttimer = timer.add(msecs,'talk');\n    let promise = ttimer.then(() => {\n        chatLine.done = true;\n        // console.log(\"done \"+text, chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\nfunction offerTalk(pSprite) {\n    if (pSprite.pTalkToMe || pSprite.pSpeechBubble) return;\n    if (this.chat && this.chat.lines.find(line => ! line.done)) {\n        if ( ! this.pTalkToMe) {\n            this.pTalkToMe = templates.copy(\"speech-bubble\", -5, -this.height -5);\n            this.addChild(this.pTalkToMe);\n            this.pTalkToMe.scale.x = 0.25;\n            this.pTalkToMe.scale.y = 0.25;            \n        }\n        this.pTalkToMe.visible = true;\n        this.pTalkToMe.alpha = 0.75;\n    }    \n}\n\nlet lastMove = new Date().getTime() - 2000;\nlet moving = false;\n\n/**\n  HACK: set playerx, playery for the room you are _leaving_\n * @param {!string} roomName * no-op if already in the room AND options arent modified\n * @param {?Object} options update state for roomName\n * @param {?Object} moveOptions {transition:none|??}\n */\nfunction moveRoom(roomName, options, moveOptions) {\n    console.log(\"moveRoom\",roomName, options,moveOptions); // for debug\n    if (moving) return; // no overlaps\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    if (rooms.current.name === roomName) { // paranoia\n        rooms.current.alpha = 1.0; // ensure fully on\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = options && Object.entries(options).find(([k,v]) => ro[k] !== v);\n        if ( ! mod) {\n            moving = false;\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n        console.log(\"moveRoom\",roomName, \"mod\",mod);\n    }\n    // anti-flicker\n    lastMove = new Date().getTime();\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // stash player x/y on the leaving room\n    // NB: If we move from Room_PLatformer X to Room_PLatformer Y -- the later updateRoomState can set x or y\n    let player = getPlayer();\n    if (player) {\n        let leaveState = {playerx: player.x, playery: player.y};\n        updateRoomState(rooms.current.name, leaveState);\n    }\n    const moveRoom2 = () => {\n        moving = false;\n        // // close modal?\n        // if (UI.modal) {\n        //     rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            updateRoomState(roomName, options);\n        }\n        // ensure fully on\n        setTimeout(() => {rooms.current.alpha = 1.0;}, 1);\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    moving = true;\n    transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(rooms.current, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction doKillMonster(pSnake) {\n    if (pSnake.dying) return;\n    pSnake.depth = 100;\n    pSnake.dying = true;\n    pSnake.dx = 0;\n    if (pSnake.dieTex) pSnake.tex = pSnake.dieTex;\n    pSnake.play(); \n    let smaller = pSnake.scale.y * 0.8;\n    tween.add({\n        obj:pSnake.scale,\n        duration:300,\n        fields: {\n            y: smaller,\n            x: smaller\n        }\n    }).then(() => pSnake.kill = true);\n}\n\nfunction remove(array, item) {\n    check(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    check(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};\n\n/**\n * Fix bug (dec 2023) where scale is ignored\n */\nfunction getBounds(pSprite) {\n    if ( ! pSprite.shape) {\n        console.log(\"no shape\",pSprite);\n        return pSprite.getBounds();\n    }\n\tlet h = pSprite.height;\n\tlet w = pSprite.width;\n\tlet {left,right,top,bottom, type, r} = pSprite.shape;\n\t// scale\n\tif (pSprite.scale.y) {\n\t\ttop *= pSprite.scale.y;\n\t\tbottom *= pSprite.scale.y;\n\t\tr *= pSprite.scale.y;\n\t}\n\tif (pSprite.scale.x) {\n\t\tleft *= pSprite.scale.x;\n\t\tright *= pSprite.scale.x;\n\t}\n\tlet b1;\n\tif (type===\"circle\") {\n\t\tb1 = {\n\t\t\tx: pSprite.x - r, \n\t\t\ty: pSprite.y - r,\n\t\t\twidth: 2*r, \n\t\t\theight: 2*r\n\t\t};\n\t} else {\n\t\tb1 = {\n\t\t\tx: pSprite.x - left, \n\t\t\ty: pSprite.y - top,\n\t\t\twidth: right - left, //;left - right, \n\t\t\theight: top - bottom\n\t\t};\n\t}\n\tcheck(b1.height >= -0.1, b1); // allow maths precision\n\tcheck(b1.width >= -0.1, b1);\n    // console.log(\"boundsshape\",pSprite);\n    return b1;\n}\n\n\nlet pg1, pg2;\n/**\n * @returns {boolean} box collision test\n */\nfunction testBoxCollision(bounds1, bounds2)\n{\n    console.log(\"testBoxCollision\",bounds1, bounds2);\n    let hit = bounds1.x < bounds2.x + bounds2.width\n        && bounds1.x + bounds1.width > bounds2.x\n        && bounds1.y < bounds2.y + bounds2.height\n        && bounds1.y + bounds1.height > bounds2.y;\n        // debug\n    // if ( ! this.pg1) {\n    //     let pg1 = new PIXI.Graphics();\n    //     this.pg1 = pg1;\n    //     rooms.current.addChild(this.pg1);            \n    //     let pg2 = new PIXI.Graphics();\n    //     this.pg2 = pg2;\n    //     rooms.current.addChild(this.pg2);            \n    // }\n    // this.pg1.clear();\n    // this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);\n    // this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);\n    // this.pg1.beginFill(0xCCFFCC,1);\n    // this.pg1.drawCircle(bounds1.x, bounds1.y, 3);\n\n    // this.pg2.clear();\n    // this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);\n    // this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);\n    // this.pg2.beginFill(0xCCCCFF,1);\n    // this.pg2.drawCircle(bounds2.x, bounds2.y, 3);\n\n    return hit;\n}\n\n// override to put in on/off control\nconst _spawn = sounds.play;\nsounds.play = function soundSpawn(name, options, callback) {\n    if (callback) {\n        options.complete = callback; // upgrade to ctjs v4\n        console.warn(\"old sounds code use complete\");\n    }\n    if (getOption(\"sound\")) {\n        try {\n            _spawn(name, options);\n        } catch (err) {\n            console.error(err); // swallow\n        }\n    } else if (options?.complete) {\n        // better do the callback anyway, after a short pause\n        timer.add(400).then(options.complete);\n    }\n}\nlet MUSIC_VOLUME = 0.5;\nfunction musicSpawn(name, options={}) {\n    musicOff();\n    if (getOption(\"music\")) {\n        if ( ! options.volume) options.volume = MUSIC_VOLUME;\n        let musicAudio = sounds.play(name, options);\n        console.log(\"musicAudio\",musicAudio);\n    }\n}\nfunction musicOff() {\n    try {\n        sounds.stop();\n        // Object.values(res.sounds).forEach(snd => snd.stop());\n    } catch(paranoia) {\n        console.error(paranoia);\n    }\n}\n\n\nasync function pulse(pSprite, tint=0x9999ff, pChimp) {\n    if (pSprite._pulse) return;    \n    // pSprite._pulse = new Date().getTime(); // tween??\n    try {\n        pSprite.tint = tint;\n        await pause(200);\n        while(pChimp && place.collide(pChimp, pSprite)) {\n            await pause(100);\n        }\n        pSprite.tint = 0xffffff;\n        pSprite._pulse = null;\n    } catch(ohwell) {\n        // console.log(\"(skip) pulse error\",ohwell); // harmless\n    }\n};\n\n// HACK fix bug Jan 2024\nconst _onDestroy = templates.onDestroy;\nfunction od2(args) {    \n    // console.warn(\"onDestroy this\", this, args);\n    try {\n        _onDestroy.apply(this, args);\n    } catch(wtf) {\n        console.error(\"onDestroy\", wtf, this);\n    }\n};\ntemplates.onDestroy = od2;\n\n\n// // HACK fix merge / tilemap cache bug Feb 2024 https://github.com/ct-js/ct-js/issues/501\n// const _tmc = Tilemap.cache;\n// Tilemap.cache = function tmc2(args) {    \n//     try {\n//         _tmc.apply(this, args);\n//     } catch(wtf) {\n//         console.error(\"Tilemap cache (swallow)\", wtf, this);\n//     }\n// };\n// const _tm_p = Tilemap.__proto__;  Class constructor wd cannot be invoked without 'new'\n// Tilemap.__proto__ = function tm_p2(args) {\n//     let tm = _tm_p.apply(this, args);\n//     tm.cache = Tilemap.cache;\n//     return tm;\n// }\n"
   - name: element-info
     code: |-
 
@@ -1083,7 +1094,7 @@ scripts:
           let target = Math.PI / 2;
           chimp.dy = 0;
           chimp.dx = 0;
-          ct.tween.add({
+          tween.add({
               obj: chimp,
               fields: {
                   rotation: target,
@@ -1127,6 +1138,7 @@ scripts:
       // let sqWidth = 40;
 
       let colour = {
+          white: 0xffffff,
           red: 0xff6666,
           blue: 0x6666ff,
           green: 0x66ff66,
@@ -1531,6 +1543,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 274
             'y': 454
             opacity: 1
@@ -1542,6 +1555,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 749
             'y': 426
             opacity: 1
@@ -1553,6 +1567,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 228
             'y': 421
             opacity: 1
@@ -1564,6 +1579,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 937
             'y': 251
             opacity: 1
@@ -1575,6 +1591,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 482
             'y': 222
             opacity: 1
@@ -1586,6 +1603,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 896
             'y': 288
             opacity: 1
@@ -1597,6 +1615,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 699
             'y': 690
             opacity: 1
@@ -1608,6 +1627,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 128
             'y': 690
             opacity: 1
@@ -1619,6 +1639,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 5
             'y': 0
             opacity: 1
@@ -1630,6 +1651,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -80
             'y': 288
             opacity: 1
@@ -1641,6 +1663,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 24
             'y': 608
             opacity: 1
@@ -1652,6 +1675,7 @@ assets:
             uid: TQtRCB1Lb457JW
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 192
             'y': 0
             opacity: 1
@@ -1663,6 +1687,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 384
             'y': 0
             opacity: 1
@@ -1674,6 +1699,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 576
             'y': 0
             opacity: 1
@@ -1685,6 +1711,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 768
             'y': 0
             opacity: 1
@@ -1696,6 +1723,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1152
             'y': 0
             opacity: 1
@@ -1707,6 +1735,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 24
             'y': 208
             opacity: 1
@@ -1718,6 +1747,7 @@ assets:
             uid: TQtRCB1Lb457JW
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1040
             'y': 208
             opacity: 1
@@ -1729,6 +1759,7 @@ assets:
             uid: TQtRCB1Lb457JW
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 747
             'y': 689
             opacity: 1
@@ -1740,6 +1771,7 @@ assets:
             uid: 3BN2zrLb27ftrC
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 181
             'y': 507
             opacity: 1
@@ -1751,6 +1783,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 960
             'y': 0
             opacity: 1
@@ -1762,6 +1795,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1036
             'y': 613
             opacity: 1
@@ -1773,6 +1807,7 @@ assets:
             uid: TQtRCB1Lb457JW
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 15
             opacity: 1
@@ -1784,6 +1819,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 285
             opacity: 1
@@ -1795,6 +1831,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 285
             opacity: 1
@@ -1806,6 +1843,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 482
             'y': 166
             opacity: 1
@@ -1817,6 +1855,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 546
             'y': 166
             opacity: 1
@@ -1828,6 +1867,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 546
             'y': 102
             opacity: 1
@@ -1839,6 +1879,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 482
             'y': 102
             opacity: 1
@@ -1850,6 +1891,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 610
             'y': 166
             opacity: 1
@@ -1861,6 +1903,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 610
             'y': 102
             opacity: 1
@@ -1872,6 +1915,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 602
             'y': 222
             opacity: 1
@@ -1883,6 +1927,7 @@ assets:
             uid: hz2P8B2MQzdknz
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 150
             opacity: 1
@@ -1894,6 +1939,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 150
             opacity: 1
@@ -1905,6 +1951,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 15
             opacity: 1
@@ -1916,6 +1963,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 420
             opacity: 1
@@ -1927,6 +1975,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 555
             opacity: 1
@@ -1938,6 +1987,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 0
             opacity: 1
@@ -1949,6 +1999,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 420
             opacity: 1
@@ -1960,6 +2011,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 555
             opacity: 1
@@ -1971,6 +2023,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 144
             'y': 656
             opacity: 1
@@ -1982,6 +2035,7 @@ assets:
             uid: dzFzhGJ9PJ9CHk
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 866
             'y': 64
             opacity: 1
@@ -1993,6 +2047,7 @@ assets:
             uid: dzFzhGJ9PJ9CHk
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -110
             'y': 64
             opacity: 1
@@ -2006,6 +2061,7 @@ assets:
             customProperties:
               newProperty1: ''
               newProperty2: ''
+            bindings: {}
           - x: -110
             'y': 464
             opacity: 1
@@ -2019,6 +2075,7 @@ assets:
             customProperties:
               newProperty1: ''
               newProperty2: ''
+            bindings: {}
           - x: 1216
             'y': 64
             opacity: 1
@@ -2031,6 +2088,7 @@ assets:
             exts: {}
             customProperties:
               newProperty3: ''
+            bindings: {}
           - x: 1221
             'y': 475
             opacity: 1
@@ -2042,6 +2100,7 @@ assets:
             uid: T5qkQrDTnNDf3D
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -110
             'y': 690
             opacity: 1
@@ -2053,6 +2112,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 928
             'y': 690
             opacity: 1
@@ -2064,6 +2124,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 96
             'y': 64
             opacity: 1
@@ -2075,6 +2136,7 @@ assets:
             uid: dzFzhGJ9PJ9CHk
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1528
             'y': -55
             opacity: 1
@@ -2086,6 +2148,7 @@ assets:
             uid: 5BPgf2T7gc2956
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -108
             'y': -55
             opacity: 1
@@ -2097,6 +2160,7 @@ assets:
             uid: 5BPgf2T7gc2956
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 849
             'y': 660
             opacity: 1
@@ -2108,6 +2172,7 @@ assets:
             uid: dzFzhGJ9PJ9CHk
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -75
             'y': 0
             opacity: 1
@@ -2119,6 +2184,7 @@ assets:
             uid: cqqdNgkBk88ckw
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -75
             'y': 340
             opacity: 1
@@ -2130,6 +2196,7 @@ assets:
             uid: cqqdNgkBk88ckw
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1185
             'y': 0
             opacity: 1
@@ -2141,6 +2208,7 @@ assets:
             uid: cqqdNgkBk88ckw
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1185
             'y': 340
             opacity: 1
@@ -2152,6 +2220,7 @@ assets:
             uid: cqqdNgkBk88ckw
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 317
             'y': 690
             opacity: 1
@@ -2162,7 +2231,8 @@ assets:
             rotation: 0
             uid: 1cRbbTTRzCHgjn
             exts: &ref_0 {}
-            customProperties: &ref_1 {}
+            customProperties: {}
+            bindings: {}
           - x: 507
             'y': 690
             opacity: 1
@@ -2173,7 +2243,8 @@ assets:
             rotation: 0
             uid: 1cRbbTTRzCHgjn
             exts: *ref_0
-            customProperties: *ref_1
+            customProperties: {}
+            bindings: {}
           - x: 647
             'y': 457
             opacity: 1
@@ -2184,7 +2255,8 @@ assets:
             rotation: 0
             uid: 1cRbbTTRzCHgjn
             exts: *ref_0
-            customProperties: *ref_1
+            customProperties: {}
+            bindings: {}
           - x: 577
             'y': 687
             opacity: 1
@@ -2196,6 +2268,7 @@ assets:
             uid: hz2P8B2MQzdknz
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 360
             'y': 454
             opacity: 1
@@ -2207,6 +2280,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 229
             'y': 476
             opacity: 1
@@ -2216,8 +2290,9 @@ assets:
               'y': 1
             rotation: 0
             uid: CzPkkntW1Thjwh
-            exts: &ref_2 {}
-            customProperties: &ref_3 {}
+            exts: &ref_1 {}
+            customProperties: {}
+            bindings: {}
           - x: 749
             'y': 366
             opacity: 1
@@ -2227,15 +2302,17 @@ assets:
               'y': 1
             rotation: 0
             uid: CzPkkntW1Thjwh
-            exts: *ref_2
-            customProperties: *ref_3
+            exts: *ref_1
+            customProperties: {}
+            bindings: {}
         tiles:
           - depth: 1
             tiles: []
             extends: {}
             hidden: false
+            cache: true
         extends: {}
-        lastmod: 1705524350187
+        lastmod: 1709247516702
         events: []
         uid: HF5hHmkzPTQNmb
         behaviors: []
@@ -4577,8 +4654,8 @@ assets:
               'y': 1
             rotation: 0
             uid: W135h7PGBzcWLB
-            exts: &ref_4 {}
-            customProperties: &ref_5 {}
+            exts: &ref_2 {}
+            customProperties: &ref_3 {}
           - x: 1190
             'y': 150
             opacity: 1
@@ -4588,8 +4665,8 @@ assets:
               'y': 1
             rotation: 0
             uid: W135h7PGBzcWLB
-            exts: *ref_4
-            customProperties: *ref_5
+            exts: *ref_2
+            customProperties: *ref_3
           - x: 1190
             'y': 15
             opacity: 1
@@ -4599,8 +4676,8 @@ assets:
               'y': 1
             rotation: 0
             uid: W135h7PGBzcWLB
-            exts: *ref_4
-            customProperties: *ref_5
+            exts: *ref_2
+            customProperties: *ref_3
           - x: 1190
             'y': 420
             opacity: 1
@@ -4610,8 +4687,8 @@ assets:
               'y': 1
             rotation: 0
             uid: W135h7PGBzcWLB
-            exts: &ref_6 {}
-            customProperties: &ref_7 {}
+            exts: &ref_4 {}
+            customProperties: &ref_5 {}
           - x: 1190
             'y': 555
             opacity: 1
@@ -4621,8 +4698,8 @@ assets:
               'y': 1
             rotation: 0
             uid: W135h7PGBzcWLB
-            exts: *ref_6
-            customProperties: *ref_7
+            exts: *ref_4
+            customProperties: *ref_5
           - x: -100
             'y': 0
             opacity: 1
@@ -4643,8 +4720,8 @@ assets:
               'y': 1
             rotation: 0
             uid: W135h7PGBzcWLB
-            exts: &ref_8 {}
-            customProperties: &ref_9 {}
+            exts: &ref_6 {}
+            customProperties: &ref_7 {}
           - x: -100
             'y': 555
             opacity: 1
@@ -4654,8 +4731,8 @@ assets:
               'y': 1
             rotation: 0
             uid: W135h7PGBzcWLB
-            exts: *ref_8
-            customProperties: *ref_9
+            exts: *ref_6
+            customProperties: *ref_7
           - x: 144
             'y': 656
             opacity: 1
@@ -5561,7 +5638,7 @@ assets:
             bindings: {}
         tiles: []
         extends: {}
-        lastmod: 1708681509629
+        lastmod: 1709247950306
         events:
           - eventKey: OnRoomStart
             code: >
@@ -5606,29 +5683,29 @@ assets:
                       roomName = platform4symbol[options.symbol];                
                   }    
                   if ( ! roomName) {
-                      let rooms = Object.keys(rooms.templates).filter(name => name.match(/Platformer[0-9]+/));
-                      roomName = getRandomMember(rooms);
+                      let platformerRooms = Object.keys(rooms.templates).filter(name => name.match(/Platformer[0-9]+/));
+                      roomName = getRandomMember(platformerRooms);
                   }         
                   // merge!
                   console.log("rooms.MERGE "+roomName, rooms.current?.name);
                   let room2 = rooms.merge(roomName);
                   console.log("merged", room2, "rooms.current", rooms.current, "parent", rooms.current.parent);
-                  // ct.js bug workaround Dec 2023: patch scale
-                  let t = rooms.templates[roomName];
-                  console.log("TODO fix merge", t);
-                  if (t && room2.copies) {
-                      let copy4xyt = {};        
-                      room2.copies.forEach(copy => {
-                          copy4xyt[copy.x+","+copy.y+copy.template] = copy;
-                      });
-                      t.objects.forEach(copy => {
-                          let k = copy.x+","+copy.y+copy.template;
-                          let newCopy = copy4xyt[k];
-                          if ( ! newCopy) return;
-                          newCopy.scale.x = copy.scale.x;
-                          newCopy.scale.y = copy.scale.y;
-                      });
-                  }
+                  // // ct.js bug workaround Dec 2023: patch scale
+                  // let t = rooms.templates[roomName];
+                  // console.log("TODO fix merge", t);
+                  // if (t && room2.copies) {
+                  //     let copy4xyt = {};        
+                  //     room2.copies.forEach(copy => {
+                  //         copy4xyt[copy.x+","+copy.y+copy.template] = copy;
+                  //     });
+                  //     t.objects.forEach(copy => {
+                  //         let k = copy.x+","+copy.y+copy.template;
+                  //         let newCopy = copy4xyt[k];
+                  //         if ( ! newCopy) return;
+                  //         newCopy.scale.x = copy.scale.x;
+                  //         newCopy.scale.y = copy.scale.y;
+                  //     });
+                  // }
                   // // patch backgrounds -- doesn't work
                   // console.log("room.backgrounds", rooms.current.backgrounds, "room2.backgrounds", room2.backgrounds, "t.backgrounds", t.bgs, t.backgrounds);
                   // room2.backgrounds?.forEach((bg,i) => {
@@ -5652,7 +5729,8 @@ assets:
               if ( ! options.bgName) options.bgName = getRandomMember("backdrop
               wall-1 wall-2 wall-3 wall-4".split(" "));    
 
-              const bg = backgrounds.add(options.bgName);
+              const bg = backgrounds.add(options.bgName, 0, -100,
+              rooms.current);
 
               bg.alpha = 0.35;
 
@@ -5660,7 +5738,7 @@ assets:
 
               bg.parallaxY = 0.1;  
 
-              console.log("picked bg",bg);
+              // console.log("picked bg",bg);
 
 
               // Blank edges
@@ -6479,606 +6557,6 @@ assets:
         onstep: ''
         ondraw: ''
         onleave: ''
-        gridX: 16
-        gridY: 16
-        diagonalGrid: false
-        simulate: true
-        width: 1280
-        height: 720
-        restrictCamera: false
-        restrictMaxX: 1280
-        restrictMinX: 1280
-        restrictMaxY: 720
-        restrictMinY: 720
-        isUi: false
-        name: Room_Platformer_backup_dup
-        backgroundColor: '#000000'
-        follow: -1
-        backgrounds: []
-        copies:
-          - x: 768
-            'y': 224
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: 0
-            uid: CfLHnnjb3G8L59
-            exts: {}
-            customProperties: {}
-          - x: -64
-            'y': 688
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 896
-            'y': 288
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 896
-            'y': 688
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 704
-            'y': 688
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 128
-            'y': 688
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 0
-            'y': 0
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 0.45714286
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 0
-            'y': 288
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 1104
-            'y': 464
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: -0.75
-              'y': 0.78666667
-            rotation: 0
-            uid: T5qkQrDTnNDf3D
-            exts: {}
-            customProperties: {}
-          - x: 976
-            'y': 608
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 0.71794872
-              'y': 0.80733944
-            rotation: 0
-            uid: TQtRCB1Lb457JW
-            exts: {}
-            customProperties: {}
-          - x: -48
-            'y': 464
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 0.75
-              'y': 0.78666667
-            rotation: 0
-            uid: T5qkQrDTnNDf3D
-            exts: {}
-            customProperties:
-              newProperty1: ''
-              newProperty2: ''
-          - x: 64
-            'y': 608
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: -0.71794872
-              'y': 0.80733944
-            rotation: 0
-            uid: TQtRCB1Lb457JW
-            exts: {}
-            customProperties: {}
-          - x: -48
-            'y': 64
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 0.75
-              'y': 0.78666667
-            rotation: 0
-            uid: T5qkQrDTnNDf3D
-            exts: {}
-            customProperties:
-              newProperty1: ''
-              newProperty2: ''
-          - x: 192
-            'y': 0
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 0.45714286
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 384
-            'y': 0
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 0.45714286
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 576
-            'y': 0
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 0.45714286
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 768
-            'y': 0
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 0.45714286
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 960
-            'y': 0
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 0.45714286
-            rotation: 0
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 1088
-            'y': 64
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: -0.75
-              'y': 0.78666667
-            rotation: 0
-            uid: T5qkQrDTnNDf3D
-            exts: {}
-            customProperties:
-              newProperty3: ''
-          - x: 64
-            'y': 208
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: -0.71794872
-              'y': 0.80733944
-            rotation: 0
-            uid: TQtRCB1Lb457JW
-            exts: {}
-            customProperties: {}
-          - x: 144
-            'y': 656
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 0.67605634
-              'y': 0.56140351
-            rotation: 0
-            uid: dzFzhGJ9PJ9CHk
-            exts: {}
-            customProperties: {}
-          - x: 1088
-            'y': 288
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: -1.5707963267948966
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 1088
-            'y': 480
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: -1.5707963267948966
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 1088
-            'y': 656
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 1
-              'y': 1
-            rotation: -1.5707963267948966
-            uid: 1cRbbTTRzCHgjn
-            exts: {}
-            customProperties: {}
-          - x: 784
-            'y': 656
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 0.67605634
-              'y': 0.56140351
-            rotation: 0
-            uid: dzFzhGJ9PJ9CHk
-            exts: {}
-            customProperties: {}
-          - x: 96
-            'y': 64
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 0.67605634
-              'y': -0.56140351
-            rotation: 0
-            uid: dzFzhGJ9PJ9CHk
-            exts: {}
-            customProperties: {}
-          - x: 816
-            'y': 64
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 0.67605634
-              'y': -0.56140351
-            rotation: 0
-            uid: dzFzhGJ9PJ9CHk
-            exts: {}
-            customProperties: {}
-          - x: 976
-            'y': 208
-            opacity: 1
-            tint: 16777215
-            scale:
-              x: 0.7
-              'y': 0.8
-            rotation: 0
-            uid: TQtRCB1Lb457JW
-            exts: {}
-            customProperties: {}
-        tiles: []
-        extends: {}
-        lastmod: 1702810745853
-        events:
-          - eventKey: OnRoomStart
-            code: >
-
-
-              // Make a room
-
-              console.log("options", this.options, roomOptions[this.name]);
-
-              // if ( ! this.options) this.options = {symbol:"He"};
-
-              let options = roomOptions[this.name];
-
-              if ( ! options) {
-                  options = {symbol:startSymbol};
-                  platform4symbol[startSymbol] = startPlatform;
-                  roomOptions[this.name] = options;
-                  console.log("START at "+options.symbol);
-              }
-
-              check(options.symbol, options);
-
-              this.element = info4symbol[options.symbol];
-
-              check(this.element && this.element.atomic_number, "No element info
-              "+this.element);
-
-              check(this.element.symbol, this.element);
-
-              this.atomicNumber = this.element?.atomic_number;
-
-
-              // fade the BG
-
-              if ( ! rooms.current.backgrounds?.length) {
-                  if ( ! options.bgName) options.bgName = getRandomMember("backdrop wall-1 wall-2 wall-3 wall-4".split(" "));    
-                  const bg = backgrounds.add(options.bgName);
-                  bg.alpha = 0.35;
-              }
-
-              // Hack Neon
-
-              if (options.symbol === "Ne") {
-                  let pEmpty = templates.copy("Empty");
-                  pEmpty.tex = "red-neon";
-                  pEmpty.x = 350;
-                  pEmpty.y = 200;
-                  pEmpty.alpha = 0.5;
-                 console.log(pEmpty);
-              }
-
-
-              {
-                  let p = platform4symbol[options.symbol] || getRandomMember([2,3,4,5]);
-                  console.log("platform",p);
-                  let room2 = rooms.merge('Platformer'+p);
-                  // room2.children.forEach(kid => {
-                  //     room2.removeChild(kid)
-                  //     rooms.current.addChild(kid);
-                  // });
-                  console.log("merged", room2, "rooms.current", rooms.current, "parent", rooms.current.parent);
-                  // room2.
-                  // room2.alpha = 1; // huh?
-                  // stage.
-              }
-
-
-              // add UI
-
-              let roomUI = rooms.append('Room_UI');
-
-              // On-screen joystick?
-
-              // if (isMobile() || true) {
-
-              //     vkeys.joystick({
-
-              //         key: 'Vjoy1',
-
-              //         tex: 'paper', // TODOTrackPad',
-
-              //         trackballTex: 'spit', // TODO
-
-              //         depth: 1000,
-
-              //         x: 500,
-
-              //         y: 500,
-
-              //         container: roomUI
-
-              //     });
-
-              // }
-
-
-              class Layout {
-                  nExit;
-                  sExit;
-                  eExit;
-                  wExit;
-                  tank;
-                  cat;
-              }
-
-
-              /**
-               * @returns {Layout}
-               */
-              function layoutRoom(symbol) {
-                  console.log("layoutRoom", symbol);
-                  check(symbol, "no symbol");
-                  let oldlayout = layout4symbol[symbol];
-                  if (oldlayout) {
-                      console.log("use oldlayout for "+symbol, oldlayout);
-                      return oldlayout;
-                  }
-                  console.log("make new layout for "+symbol);
-                  let layout = new Layout();
-                  layout.symbol = symbol;
-                  layout4symbol[symbol] = layout;
-                  let corners = "NE NW SE SW".split(" "); 
-                  // match existing doors
-                  let leftSymbol = getNextElementSymbol(symbol, -1, 0);
-                  let upSymbol = getNextElementSymbol(symbol, 0, -1);
-                  if (leftSymbol) {
-                      let leftLayout = layoutRoom(leftSymbol);
-                      check(leftLayout.eExit, "no eExit", leftSymbol, leftLayout);
-                      layout.wExit = leftLayout.eExit.replace("E","W");
-                      remove(corners, layout.wExit);
-                      console.log(symbol, "has leftSymbol", leftSymbol, layout.wExit);
-                  }
-                  if (upSymbol) {
-                      let upLayout = layoutRoom(upSymbol);
-                      check(upLayout.sExit, "no sExit in upLayout", upSymbol, upLayout);
-                      layout.nExit = upLayout.sExit.replace("S","N");
-                      remove(corners, layout.nExit);
-                  }
-                  console.log("back to layout",symbol,"corners left",corners.join(", "));
-                  // place the tank
-                  let corner = getRandomMember(corners);
-                  layout.tank = corner;
-                  remove(corners, layout.tank);
-                  // place exits
-                  check(corners.length);
-                  // console.log(symbol,JSON.stringify(corners),JSON.stringify(layout));
-                  // if ( ! layout.wExit) {
-                  //     let corner = getRandomMember(corners);
-                  //     layout.wExit = corner;
-                  // }
-                  if ( ! layout.eExit) {
-                      let eSymbol = getNextElementSymbol(symbol, 1, 0);
-                      if (eSymbol) {
-                          let corner = getRandomMember(corners.filter(c => c.includes("E")));
-                          if ( ! corner) {
-                              console.warn("Must now overlap for E");
-                              if (layout.nExit && layout.nExit.endsWith("E")) corner = layout.nExit;
-                              else corner = "SE";
-                          }
-                          layout.eExit = corner;
-                      }
-                  }
-                  // if ( ! layout.nExit) {
-                  //     let corner = getRandomMember(corners);
-                  //     layout.nExit = corner;
-                  // }
-                  if ( ! layout.sExit) {
-                      let sSymbol = getNextElementSymbol(symbol, 0, 1);
-                      if (sSymbol) {
-                          let corner = getRandomMember(corners.filter(c => c.includes("S")));
-                          if ( ! corner) {
-                              console.warn("Must now overlap for S");
-                              if (layout.eExit && layout.eExit.startsWith("S")) corner = layout.eExit;
-                              else corner = "SW";
-                          }
-                          // check(corner, "no S corners", corners, symbol+ " to "+sSymbol,"layout",layout);
-                          layout.sExit = corner;
-                      } else {
-                          console.log("no S symbol", symbol, sSymbol);
-                      }
-                  }
-                  if ( ! layout.cat) {
-                      let corner = getRandomMember(corners);
-                      layout.cat = corner;
-                  }
-                  console.log("layout", symbol, layout);
-                  return layout;
-              }
-
-
-              /** use a fn to avoid memory leaks */
-
-              function arrangeRoom(room) {
-                  let roomState = roomOptions[room.name];
-                  if ( ! roomState) roomState = roomOptions[room.name] = {};
-                  console.log("arrange", room, "element", room.element, "symbol", room.symbol, "state", roomState);
-                  check(room.element.symbol, room);
-                  const symbol = room.element.symbol;
-                  let layout = layoutRoom(symbol);
-                  console.log(symbol, layout);
-                  let n = room.element.atomic_number % 4;
-                  console.log("n",n,"element",symbol);
-                  let doors = getTemplates(room, "door");
-                  let manholes = getTemplates(room, "manhole");
-                  let tanks = templates.list['tank-2'].filter(tmp => tmp.getRoom() === room);
-                  // let cats = templates.list['cat-1'].filter(tmp => tmp.getRoom() === room);
-                  tanks.forEach(tank => {
-                      let corner = getCompassCorner(tank);
-                      if (layout.tank !== corner) {
-                          console.log("kill tank",corner,"vs layout",layout);
-                          tank.kill = true;
-                      }   
-                  });
-                  console.log("doors",doors);
-                  // exists and locks
-                  manholes.forEach(manhole => {
-                      let cc = getCompassCorner(manhole);
-                      if (layout.nExit === cc || layout.sExit === cc) {
-                          let dy = manhole.y > 200? 1 : -1;
-                          let nextSymbol = getNextElementSymbol(symbol, 0, dy);
-                          if ( ! nextSymbol) manhole.kill = true;
-                          manhole.nextSymbol = nextSymbol;
-                          if (isUnlocked(symbol, nextSymbol)) {
-                              manhole.unlocked = true;
-                          }
-                      } else {
-                          manhole.kill = true;
-                      }
-                  });
-                  doors.forEach(door => {
-                      let cc = getCompassCorner(door);
-                      if (layout.eExit === cc || layout.wExit === cc) {
-                          let dx = door.x > 200? 1 : -1;
-                          let nextSymbol = getNextElementSymbol(symbol, dx, 0);
-                          door.nextSymbol = nextSymbol;
-                          if (isUnlocked(symbol, nextSymbol)) {
-                              door.unlocked = true;
-                          }
-                      } else {
-                          door.kill = true;
-                      }
-                  });
-
-                  // for(let i=1; i<cats.length; i++) {
-                  //     cats[i].kill = true;
-                  // }
-
-                  // Place the chimp    
-                  if (roomState.playerx) {
-                      let chimp = getTemplates(room, "chimp")[0];
-                      if (chimp) { // paranoia (maybe the chimp got killed)
-                          chimp.x = roomState.playerx;
-                          chimp.y = roomState.playery;
-                      }
-                  }
-              };
-
-              arrangeRoom(this);
-            arguments: {}
-            lib: core
-        uid: ncBwwPjwg1Cjhw
-        behaviors: []
-      - type: room
-        oncreate: ''
-        onstep: ''
-        ondraw: ''
-        onleave: ''
         gridX: 5
         gridY: 5
         diagonalGrid: false
@@ -7107,6 +6585,7 @@ assets:
             uid: KPQQ9RdM3P7bRh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 998.79428571
             'y': 19.82285714
             opacity: 1
@@ -7118,6 +6597,7 @@ assets:
             uid: zTf3hWP3nKGMhm
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 605
             'y': 100.00000000000003
             opacity: 1
@@ -7129,6 +6609,7 @@ assets:
             uid: 5qNm5Jn2njFgMr
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 55
             'y': 95
             opacity: 1
@@ -7140,6 +6621,7 @@ assets:
             uid: 4zDcPd9cp6LqfL
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 225
             'y': 640
             opacity: 1
@@ -7151,12 +6633,13 @@ assets:
             uid: Cc94g82RLh4cTF
             exts: {}
             customProperties: {}
+            bindings: {}
         tiles: []
         extends: {}
-        lastmod: 1705523625958
+        lastmod: 1709247950178
         events:
           - eventKey: OnRoomStart
-            code: "\n\nthis.puzzleType = \"flow\";\nthis.elementSymbol = roomOptions[this.name].symbol;\ncheck(this.elementSymbol);\nthis.element = info4symbol[this.elementSymbol]\n\n// get harder\nthis.puzzleSize = Math.min(Math.max(10, this.element.atomic_number / 5), 5);\n\nconsole.log(\"room\", this, \"roomOptions\", JSON.stringify(roomOptions), \"element\", this.element);\n\nrooms.append('Room_UI');\n\nconst BLANK_TEXTURE = \"pipe-empty\";\nconst EW_TEXTURE = \"pipe-bit-1\";\nconst NW_TEXTURE = \"pipe-corner-NW\";\nconst SW_TEXTURE = \"pipe-corner-SW\";\n\n// container\nthis.sortableChildren = true;\nlet pContainer = getTemplates(this,\"PlumbingContainer\")[0];\npContainer.zIndex = 100;\n// NB: x/y adjustment numbers found by random tweaking :'(\nlet sqWidth = Math.floor((pContainer.width - 150) / this.puzzleSize);\nlet offsetX = (pContainer.width - sqWidth*this.puzzleSize)/2 + 15; \nlet offsetY = 20 + 32; \n\n// Text\nlet textBlock = getTemplates(this, \"TextBlock\")[0];\nlet info = info4symbol[this.elementSymbol];\naddText(textBlock, info.atomic_number+\": \"+info.name+\" (\"+info.symbol+\")\\n\"\n    +\"At room temperature: \"+info.standard_conditions_state+\"\\n\"\n    +\"Normal appearance: \"+info.appearance+\"\\n\"\n    +info.interesting_fact\n    // +JSON.stringify(info)\n    , 10, 10, {wordWrap:true, wordWrapWidth: textBlock.width - 20});\n\n// TODO seeds\n\n/**\n * @returns {Pipe[]}\n */\nfunction makePipes({w=8}) {\n    let pipes = [];\n    for(let i=0; i<w; i++) {\n        let pipe = new Pipe();\n        pipes.push(pipe);\n        pipe.col = Object.keys(colour)[i];\n        for(let j=0; j<w; j++) {\t\t\t\t\n            pipe.xys.push([i, j]);\n        }\n    }\n\n    // mutate - move a pair of pipe ends\n    for(let i=0; i<1000000; i++) {\n        let pipe1 = getRandomMember(pipes);\n        let pipe2 = getRandomMember(pipes);\n        if (pipe1==pipe2) continue;\n        let ai = getRandomChoice(0.5)? 0 : pipe1.xys.length - 1;\n        let bi = getRandomChoice(0.5)? 0 : pipe2.xys.length - 1;\n        let a0 = pipe1.xys[ai];\n        let b0 = pipe2.xys[bi];\n        if (isTouching(a0, b0)) {\n            // move one end\n            if (getRandomChoice(0.5)) {\n                movePipe(pipe1,ai,pipe2,bi);\n            } else {\n                movePipe(pipe2,bi,pipe1,ai);\n            }\n        }\n    }\t\n    return pipes;\t\n} // ./ makePipes\n\nfunction movePipe(pipe1,  ai,  pipe2,  bi) {\n    if (pipe1.xys.length < 4) return;\n    let s = pipe1.xys[ai];\n    // avoid looping back:\n    if (isLoopBack(s, pipe2, pipe2.xys[bi])) {\n        return;\n    } else {\n        pipe1.xys = pipe1.xys.filter(xy => xy !== s);\n        if (bi==0) pipe2.xys.splice(bi, 0, s);\n        else pipe2.xys.push(s);\n    }\n}\n\nfunction isLoopBack(s, pipe2, b0) {\n    for (let i = 0; i < pipe2.xys.length; i++) {\n        let b = pipe2.xys[i];\n        if (b===b0) continue;\n        if (isTouching(s,b)) return true;\n    }\n    return false;\n}\n\nthis.pipes = makePipes({w:this.puzzleSize});\n\nconsole.log(this.pipes);\n\n// render\nthis.grid = [];\nfor(let i=0; i<this.puzzleSize; i++) this.grid.push([]);\nthis.pipes.forEach(pipe => {\n    let start = pipe.xys[0];\n    let end = pipe.xys[pipe.xys.length-1];\n    // pipe.xys.forEach(xy => {\n    [start, end].forEach(xy => {\n        let pb = new PipeBit();\n        pb.col = pipe.col;\n        pb.isEnd = true;\n        this.grid[xy[0]][xy[1]] = pb;\n    });\n});\n// console.log(\"grid\", this.grid);\n\n// draw grid\nlet pGridLines = new PIXI.Graphics();\npGridLines.lineStyle(3, 0xcccccc, 0.5, 0.5, true);\nlet h = 38; // adjust for half-brick centering in tile bits\nlet endX = offsetX + this.puzzleSize * sqWidth - h;\nlet endY = offsetY + this.puzzleSize * sqWidth - h;\nfor(let col=0; col < this.grid.length + 1; col++) {\n    pGridLines.moveTo(offsetX-35, offsetY - 38 + sqWidth*col);\n    pGridLines.lineTo(endX, offsetY - 38 + sqWidth*col);\n}\nfor(let row=0; row < this.grid.length + 1; row++) {\n    pGridLines.moveTo(offsetX-38 +sqWidth*row, offsetY-38);\n    pGridLines.lineTo(offsetX-38 +sqWidth*row, endY);\n}\npContainer.addChild(pGridLines);\n\n// grid to tile-grid\nfor(let i=0; i<this.grid.length; i++) {\n    for(let j=0; j<this.grid.length; j++) { // NB: assume square\n        // console.log(\"grid i j\", i, j, this.grid[i][j], this.grid[i][j]?.col);\n        let copy = templates.copy(\"empty-tile\");\n        copy.zIndex = 100;\n        copy.pipeColor = this.grid[i][j]?.col;\n        // let obj = new PIXI.Graphics();\n        copy.gridx = j;\n        copy.gridy = i;\n        copy.x = offsetX + sqWidth*j;\n        copy.y = offsetY + sqWidth*i;\n\n        if (copy.pipeColor) {\n            copy.isEnd = true;\n            copy.tex = \"pipe-end-block\";\n            const col = colour[copy.pipeColor];\n            copy.tint = col;\n            // obj.beginFill(colour[copy.pipeColor]);\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);            \n        } else {        \n            copy.tex = BLANK_TEXTURE; //\"pipe-bit-1\";\n        }        \n        copy.width  = sqWidth;\n        copy.height = sqWidth;\n        // copy.height = sqWidth;\n\n        // copy.addChild(obj);\n        pContainer.addChild(copy);\n    }\n}\n\nthis.pipeColourMarker = getTemplates(this, \"PipeColorMarker\")[0];\ncheck(this.pipeColourMarker);\n\nfunction setColor(color, room) {\n    check(room, \"no room\",color);\n    // select\n    room.selectedColor = color;\n    room.downColor = color;\n    console.log(\"col\",color);\n    const col = colour[color];\n    room.pipeColourMarker.tint = col;\n}\nthis.setPipeColor = setColor;\n\nthis.onTileClick = (This) => {\n    console.log(\"click\",This);\n    let room = This.getRoom();\n    if (This.isEnd) {\n        setColor(This.pipeColor, room);\n    } else {\n        room.doFillTile(This, room.selectedColor);\n    }\n};\n\n\nthis.doFillTile = function(This, color) {\n    console.log(\"bar\");\n    check(This);\n    let room = This.getRoom();\n    check(room, This);\n    if (This.isEnd) {\n        if (color===This.pipeColor) {\n            setColor(null, room);\n        } else {\n            setColor(This.pipeColor, room);\n        }\n        return;\n    }\n    This.tex = EW_TEXTURE;\n    This.pipeColor = color;\n    const col = colour[This.pipeColor];\n    This.tint = col; \n    let pb = new PipeBit();\n    pb.col = This.pipeColor;\n    pb.pTile = This;\n    room.grid[This.gridy][This.gridx] = pb;\n    // adjust graphics\n    setPipeTexture(This, room);\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid); // TODO\n    gn.forEach(nxy => {\n        let pTile = getGridEntry(room.grid, nxy)?.pTile;\n        if (pTile) setPipeTexture(pTile, room);\n    });\n    // Win?\n    let win = checkWin(room.grid, room.pipes);\n    if (win) {\n        doWin(room);\n    }\n};\n\n\nfunction setPipeTexture(This, room) {\n    console.log(\"setPipeTexture\",This);\n    check( ! This.isEnd);\n    let col = This.pipeColor;\n    if ( ! col) {\n        This.tex = BLANK_TEXTURE;\n        return;\n    }\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid);\n    console.log(\"setPipeTexture xy\",xy,\"gn\",gn);\n    let sameColor = gn.filter(nxy => {\n        // console.log(\"setPipeTexture xy\",xy,\"gn\",gn,\"grid row\",room.grid[nxy[1]]);\n        let row = room.grid[nxy[1]];\n        if ( ! row) {\n            // console.warn(\"no row in grid\",nxy,room.grid);\n            return false;\n        }\n        let npb = row[nxy[0]];\n        return npb?.col === col;\n    });\n    console.log(\"TODO which pipe texture? sameColor\",sameColor,\"xy\", xy, This, room)\n    let n = contains([xy[0],xy[1]-1], sameColor);\n    let s = contains([xy[0],xy[1]+1], sameColor);\n    let e = contains([xy[0]+1,xy[1]], sameColor);\n    let w = contains([xy[0]-1,xy[1]], sameColor);\n    console.log(\"what corner?\",\"n\",n,\"e\",e,\"s\",s,\"w\",w,\"xy\",xy);\n\n    if (n || s) {\n        if ( ! e && ! w) {\n            This.tex = EW_TEXTURE;\n            This.rotation = Math.PI / 2;\n            return;\n        }\n    } else if (e || w) {\n        This.tex = EW_TEXTURE;\n        This.rotation = 0; // reset\n        return;\n    } else {\n        This.tex = BLANK_TEXTURE;\n    }\n    // corner\n    This.rotation = 0; // reset\n    if (n && w) {\n        This.tex = NW_TEXTURE; \n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (s && w) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (n && e) {\n        This.tex = NW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    if (s && e) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    // error\n    This.tex = EW_TEXTURE;\n    console.error(\"what corner?\",n,e,s,w,xy);\n}\n\nfunction doWin(room) {\n    sounds.spawn(\"Success\");\n    room.win = true;\n    let x = room.pipeColourMarker.x;\n    let y = room.pipeColourMarker.y;\n    emitters.append(room.pipeColourMarker, \"Tandem_Sparks\"); // fire(\"Tandem_Sparks\", x, y);\n    doUnlock(room.elementSymbol);\n    addCanister(room.elementSymbol);\n    // close\n    sounds.spawn(\"Sound_Squeaky_Open\", {volume:0.5}, () => {\n        moveRoom(\"Room_Platformer\");\n    });\n}\n\nfunction checkWin(grid, pipes) {\n    console.log(\"TODO checkWin\", grid, pipes);\n    for(let i=0; i<pipes.length; i++) {\n        if ( ! checkWin2_onePipe(grid, pipes[i])) return false;\n    }\n    return true;\n}\n\n/**\n * @param {PipeBit[][]} grid\n */\nfunction checkWin2_onePipe(grid, pipe) {\n    console.log(\"pipe\", pipe.col, pipe,\"grid\",grid);\n    let startXY = pipe.xys[0];\n    let endXY = pipe.xys[pipe.xys.length-1];\n    let path = [startXY];\n    let steps = 0;\n    while(steps < 20) {\n        steps++;\n        let tip = path[path.length-1];\n        let gn = getGridNeighbours(tip, grid);\n        console.log(\"path\", path, \"gn\",gn,\"tip\",tip);\n        let nextBits = gn.filter(xy => {\n            let g0 = grid[xy[0]];\n            if ( ! g0) return false;\n            let pb = g0[xy[1]];\n            console.log(\"nextBits check xy\", xy, \"pb\", pb, path);\n            return pb && pb.col === pipe.col && ! contains(xy, path);\n        }) ;  \n        console.log(path, \"nextBits\",nextBits, grid, pipe);\n        if ( ! nextBits.length) {\n            console.log(\"FAIL for \", pipe.col, path);\n            return false;\n        }\n        let nextBit = nextBits[0];\n        if (eq(nextBit, endXY)) {\n            console.log(\"WIN for \", pipe.col, path);\n            return true;\n        }\n        console.log(\"LOOP \", pipe.col, nextBit, \"path\",path,\"endXY\", endXY);\n        path.push(nextBit);\n    }\n    // let next = grid.\n    console.log(\"max steps for \", pipe.col, path);\n    return false; // TODO\n}\n\n/**\n * @returns {Array[]} [[x,y], ...]\n */\nfunction getGridNeighbours(xy, grid) {\n    let neighbours = [[1,0],[-1,0],[0,1],[0,-1]].map(dxdy => [xy[0]+dxdy[0], xy[1]+dxdy[1]]);\n    let filtered = neighbours.filter(cell => cell[0] > 0 && cell[1] > 0 && cell[0] < grid.length && cell[1] < grid[0].length);\n    console.log(\"neighbours\",xy,grid,\"filtered\", filtered);\n    return neighbours;\n}\n\nthis.sortChildren();"
+            code: "\n\nthis.puzzleType = \"flow\";\nthis.elementSymbol = roomOptions[this.name].symbol;\ncheck(this.elementSymbol);\nthis.element = info4symbol[this.elementSymbol]\n\n// get harder\nthis.puzzleSize = Math.min(Math.max(10, this.element.atomic_number / 5), 5);\n\nconsole.log(\"room\", this, \"roomOptions\", JSON.stringify(roomOptions), \"element\", this.element);\n\nrooms.append('Room_UI');\n\nconst BLANK_TEXTURE = \"pipe-empty\";\nconst EW_TEXTURE = \"pipe-bit-1\";\nconst NW_TEXTURE = \"pipe-corner-NW\";\nconst SW_TEXTURE = \"pipe-corner-SW\";\n\n// container\nthis.sortableChildren = true;\nlet pContainer = getTemplates(this,\"PlumbingContainer\")[0];\npContainer.zIndex = 100;\n// NB: x/y adjustment numbers found by random tweaking :'(\nlet sqWidth = Math.floor((pContainer.width - 150) / this.puzzleSize);\nlet offsetX = (pContainer.width - sqWidth*this.puzzleSize)/2 + 15; \nlet offsetY = 20 + 32; \n\n// Text\nlet textBlock = getTemplates(this, \"TextBlock\")[0];\nlet info = info4symbol[this.elementSymbol];\naddText(textBlock, info.atomic_number+\": \"+info.name+\" (\"+info.symbol+\")\\n\"\n    +\"At room temperature: \"+info.standard_conditions_state+\"\\n\"\n    +\"Normal appearance: \"+info.appearance+\"\\n\"\n    +info.interesting_fact\n    // +JSON.stringify(info)\n    , 10, 10, {wordWrap:true, wordWrapWidth: textBlock.width - 20});\n\n// TODO seeds\n\n/**\n * @returns {Pipe[]}\n */\nfunction makePipes({w=8}) {\n    let pipes = [];\n    for(let i=0; i<w; i++) {\n        let pipe = new Pipe();\n        pipes.push(pipe);\n        pipe.col = Object.keys(colour)[i];\n        for(let j=0; j<w; j++) {\t\t\t\t\n            pipe.xys.push([i, j]);\n        }\n    }\n\n    // mutate - move a pair of pipe ends\n    for(let i=0; i<1000000; i++) {\n        let pipe1 = getRandomMember(pipes);\n        let pipe2 = getRandomMember(pipes);\n        if (pipe1==pipe2) continue;\n        let ai = getRandomChoice(0.5)? 0 : pipe1.xys.length - 1;\n        let bi = getRandomChoice(0.5)? 0 : pipe2.xys.length - 1;\n        let a0 = pipe1.xys[ai];\n        let b0 = pipe2.xys[bi];\n        if (isTouching(a0, b0)) {\n            // move one end\n            if (getRandomChoice(0.5)) {\n                movePipe(pipe1,ai,pipe2,bi);\n            } else {\n                movePipe(pipe2,bi,pipe1,ai);\n            }\n        }\n    }\t\n    return pipes;\t\n} // ./ makePipes\n\nfunction movePipe(pipe1,  ai,  pipe2,  bi) {\n    if (pipe1.xys.length < 4) return;\n    let s = pipe1.xys[ai];\n    // avoid looping back:\n    if (isLoopBack(s, pipe2, pipe2.xys[bi])) {\n        return;\n    } else {\n        pipe1.xys = pipe1.xys.filter(xy => xy !== s);\n        if (bi==0) pipe2.xys.splice(bi, 0, s);\n        else pipe2.xys.push(s);\n    }\n}\n\nfunction isLoopBack(s, pipe2, b0) {\n    for (let i = 0; i < pipe2.xys.length; i++) {\n        let b = pipe2.xys[i];\n        if (b===b0) continue;\n        if (isTouching(s,b)) return true;\n    }\n    return false;\n}\n\nthis.pipes = makePipes({w:this.puzzleSize});\n\nconsole.log(this.pipes);\n\n// render\nthis.grid = [];\nfor(let i=0; i<this.puzzleSize; i++) this.grid.push([]);\nthis.pipes.forEach(pipe => {\n    let start = pipe.xys[0];\n    let end = pipe.xys[pipe.xys.length-1];\n    // pipe.xys.forEach(xy => {\n    [start, end].forEach(xy => {\n        let pb = new PipeBit();\n        pb.col = pipe.col;\n        pb.isEnd = true;\n        this.grid[xy[0]][xy[1]] = pb;\n    });\n});\n// console.log(\"grid\", this.grid);\n\n// draw grid\nlet pGridLines = new PIXI.Graphics();\npGridLines.lineStyle(3, 0xcccccc, 0.5, 0.5, true);\nlet h = 38; // adjust for half-brick centering in tile bits\nlet endX = offsetX + this.puzzleSize * sqWidth - h;\nlet endY = offsetY + this.puzzleSize * sqWidth - h;\nfor(let col=0; col < this.grid.length + 1; col++) {\n    pGridLines.moveTo(offsetX-35, offsetY - 38 + sqWidth*col);\n    pGridLines.lineTo(endX, offsetY - 38 + sqWidth*col);\n}\nfor(let row=0; row < this.grid.length + 1; row++) {\n    pGridLines.moveTo(offsetX-38 +sqWidth*row, offsetY-38);\n    pGridLines.lineTo(offsetX-38 +sqWidth*row, endY);\n}\npContainer.addChild(pGridLines);\n\n// grid to tile-grid\nfor(let i=0; i<this.grid.length; i++) {\n    for(let j=0; j<this.grid.length; j++) { // NB: assume square\n        // console.log(\"grid i j\", i, j, this.grid[i][j], this.grid[i][j]?.col);\n        let copy = templates.copy(\"empty-tile\");\n        copy.zIndex = 100;\n        copy.pipeColor = this.grid[i][j]?.col;\n        // let obj = new PIXI.Graphics();\n        copy.gridx = j;\n        copy.gridy = i;\n        copy.x = offsetX + sqWidth*j;\n        copy.y = offsetY + sqWidth*i;\n\n        if (copy.pipeColor) {\n            copy.isEnd = true;\n            copy.tex = \"pipe-end-block\";\n            const col = colour[copy.pipeColor];\n            copy.tint = col;\n            // obj.beginFill(colour[copy.pipeColor]);\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);            \n        } else {        \n            copy.tex = BLANK_TEXTURE; //\"pipe-bit-1\";\n        }        \n        copy.width  = sqWidth;\n        copy.height = sqWidth;\n        // copy.height = sqWidth;\n\n        // copy.addChild(obj);\n        pContainer.addChild(copy);\n    }\n}\n\nthis.pipeColourMarker = getTemplates(this, \"PipeColorMarker\")[0];\ncheck(this.pipeColourMarker);\n\nfunction setColor(color, room) {\n    check(room, \"no room\",color);\n    // select\n    room.selectedColor = color;\n    room.downColor = color;\n    console.log(\"col\",color);\n    const col = colour[color] || colour.white; // white tint = no tint\n    room.pipeColourMarker.tint = col;\n}\nthis.setPipeColor = setColor;\n\nthis.onTileClick = (This) => {\n    console.log(\"click\",This);\n    let room = This.getRoom();\n    if (This.isEnd) {\n        setColor(This.pipeColor, room);\n    } else {\n        room.doFillTile(This, room.selectedColor);\n    }\n};\n\n\nthis.doFillTile = function(This, color) {\n    console.log(\"bar\");\n    check(This);\n    let room = This.getRoom();\n    check(room, This);\n    if (This.isEnd) {\n        if (color===This.pipeColor) {\n            setColor(null, room);\n        } else {\n            setColor(This.pipeColor, room);\n        }\n        return;\n    }\n    This.tex = EW_TEXTURE;\n    This.pipeColor = color;\n    const col = colour[This.pipeColor];\n    This.tint = col; \n    let pb = new PipeBit();\n    pb.col = This.pipeColor;\n    pb.pTile = This;\n    room.grid[This.gridy][This.gridx] = pb;\n    // adjust graphics\n    setPipeTexture(This, room);\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid); // TODO\n    gn.forEach(nxy => {\n        let pTile = getGridEntry(room.grid, nxy)?.pTile;\n        if (pTile) setPipeTexture(pTile, room);\n    });\n    // Win?\n    let win = checkWin(room.grid, room.pipes);\n    if (win) {\n        doWin(room);\n    }\n};\n\n\nfunction setPipeTexture(This, room) {\n    console.log(\"setPipeTexture\",This);\n    check( ! This.isEnd);\n    let col = This.pipeColor;\n    if ( ! col) {\n        This.tex = BLANK_TEXTURE;\n        return;\n    }\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid);\n    console.log(\"setPipeTexture xy\",xy,\"gn\",gn);\n    let sameColor = gn.filter(nxy => {\n        // console.log(\"setPipeTexture xy\",xy,\"gn\",gn,\"grid row\",room.grid[nxy[1]]);\n        let row = room.grid[nxy[1]];\n        if ( ! row) {\n            // console.warn(\"no row in grid\",nxy,room.grid);\n            return false;\n        }\n        let npb = row[nxy[0]];\n        return npb?.col === col;\n    });\n    console.log(\"TODO which pipe texture? sameColor\",sameColor,\"xy\", xy, This, room)\n    let n = contains([xy[0],xy[1]-1], sameColor);\n    let s = contains([xy[0],xy[1]+1], sameColor);\n    let e = contains([xy[0]+1,xy[1]], sameColor);\n    let w = contains([xy[0]-1,xy[1]], sameColor);\n    console.log(\"what corner?\",\"n\",n,\"e\",e,\"s\",s,\"w\",w,\"xy\",xy);\n\n    if (n || s) {\n        if ( ! e && ! w) {\n            This.tex = EW_TEXTURE;\n            This.rotation = Math.PI / 2;\n            return;\n        }\n    } else if (e || w) {\n        This.tex = EW_TEXTURE;\n        This.rotation = 0; // reset\n        return;\n    } else {\n        This.tex = BLANK_TEXTURE;\n    }\n    // corner\n    This.rotation = 0; // reset\n    if (n && w) {\n        This.tex = NW_TEXTURE; \n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (s && w) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (n && e) {\n        This.tex = NW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    if (s && e) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    // error\n    This.tex = EW_TEXTURE;\n    console.error(\"what corner?\",n,e,s,w,xy);\n}\n\nfunction doWin(room) {\n    sounds.play(\"Success\");\n    room.win = true;\n    let x = room.pipeColourMarker.x;\n    let y = room.pipeColourMarker.y;\n    emitters.append(room.pipeColourMarker, \"SparksFX\");\n    doUnlock(room.elementSymbol);\n    addCanister(room.elementSymbol);\n    // close\n    sounds.play(\"Sound_Squeaky_Open\", {volume:0.5, complete: () => {\n        moveRoom(\"Room_Platformer\");\n    }});\n}\n\nfunction checkWin(grid, pipes) {\n    console.log(\"TODO checkWin\", grid, pipes);\n    for(let i=0; i<pipes.length; i++) {\n        if ( ! checkWin2_onePipe(grid, pipes[i])) return false;\n    }\n    return true;\n}\n\n/**\n * @param {PipeBit[][]} grid\n */\nfunction checkWin2_onePipe(grid, pipe) {\n    console.log(\"pipe\", pipe.col, pipe,\"grid\",grid);\n    let startXY = pipe.xys[0];\n    let endXY = pipe.xys[pipe.xys.length-1];\n    let path = [startXY];\n    let steps = 0;\n    while(steps < 20) {\n        steps++;\n        let tip = path[path.length-1];\n        let gn = getGridNeighbours(tip, grid);\n        console.log(\"path\", path, \"gn\",gn,\"tip\",tip);\n        let nextBits = gn.filter(xy => {\n            let g0 = grid[xy[0]];\n            if ( ! g0) return false;\n            let pb = g0[xy[1]];\n            console.log(\"nextBits check xy\", xy, \"pb\", pb, path);\n            return pb && pb.col === pipe.col && ! contains(xy, path);\n        }) ;  \n        console.log(path, \"nextBits\",nextBits, grid, pipe);\n        if ( ! nextBits.length) {\n            console.log(\"FAIL for \", pipe.col, path);\n            return false;\n        }\n        let nextBit = nextBits[0];\n        if (eq(nextBit, endXY)) {\n            console.log(\"WIN for \", pipe.col, path);\n            return true;\n        }\n        console.log(\"LOOP \", pipe.col, nextBit, \"path\",path,\"endXY\", endXY);\n        path.push(nextBit);\n    }\n    // let next = grid.\n    console.log(\"max steps for \", pipe.col, path);\n    return false; // TODO\n}\n\n/**\n * @returns {Array[]} [[x,y], ...]\n */\nfunction getGridNeighbours(xy, grid) {\n    let neighbours = [[1,0],[-1,0],[0,1],[0,-1]].map(dxdy => [xy[0]+dxdy[0], xy[1]+dxdy[1]]);\n    let filtered = neighbours.filter(cell => cell[0] > 0 && cell[1] > 0 && cell[0] < grid.length && cell[1] < grid[0].length);\n    console.log(\"neighbours\",xy,grid,\"filtered\", filtered);\n    return neighbours;\n}\n\nthis.sortChildren();"
             arguments: {}
             lib: core
           - eventKey: OnStep
@@ -7247,8 +6730,9 @@ assets:
             lib: core
           - eventKey: OnPointerEnter
             code: >-
-              showTooltip(this, "You have unlocked "+counters.elements+"
-              elements of "+Object.keys(info4symbol).length);
+              showTooltip(this, "You have unlocked
+              "+gameState.counters.elements+" elements of
+              "+Object.keys(info4symbol).length);
             arguments: {}
             lib: core
           - eventKey: OnPointerLeave
@@ -7256,7 +6740,7 @@ assets:
             arguments: {}
             lib: core
         extends: {}
-        lastmod: 1705523295661
+        lastmod: 1709117761282
         uid: r5L6tg3f56jgJ4
         behaviors: []
         baseClass: AnimatedSprite
@@ -7458,7 +6942,7 @@ assets:
             lib: core
         extends:
           cgroup: interact
-        lastmod: 1704220399231
+        lastmod: 1709117249401
         uid: 3BN2zrLb27ftrC
         behaviors: []
         baseClass: AnimatedSprite
@@ -7681,7 +7165,7 @@ assets:
               // }
 
               if (hit.x) {
-                  console.log("stopx",hit.x);
+                  // console.log("stopx",hit.x);
                   this.dx = 0; // full stop, no half measures
                   newX = oldX;
               }
@@ -7897,7 +7381,7 @@ assets:
             lib: place
         extends:
           cgroup: ''
-        lastmod: 1705523186828
+        lastmod: 1709247950320
         uid: CfLHnnjb3G8L59
         behaviors: []
         baseClass: AnimatedSprite
@@ -7922,13 +7406,13 @@ assets:
               if ( ! this.kill) {
                   gameState.counters.coins++;
                   this.kill = true;
-                  sounds.spawn("ChaChing", {volume:0.1});
+                  sounds.play("ChaChing", {volume:0.1});
               }
             arguments:
               template: CfLHnnjb3G8L59
             lib: place
         extends: {}
-        lastmod: 1705523226635
+        lastmod: 1709117373821
         uid: CzPkkntW1Thjwh
         behaviors: []
         baseClass: AnimatedSprite
@@ -8007,7 +7491,7 @@ assets:
               this.depth = 0;
 
               this.doUse = function(pThis,pChimp) {
-                  let open = true || isUnlocked(getSymbol(), pThis.nextSymbol);
+                  let open = isUnlocked(getSymbol(), pThis.nextSymbol);
                   // if ( ! actions.MoveLeftRight.down) return;
                   // is it the right way??
                   // console.log("lr door?",open,actions.MoveLeftRight.value, pThis.x);
@@ -8041,13 +7525,6 @@ assets:
               };
             arguments: {}
             lib: core
-          - eventKey: collisionTemplate
-            code: |-
-
-              // this.dx = 0; // stop
-            arguments:
-              template: CfLHnnjb3G8L59
-            lib: place
           - eventKey: OnStep
             code: |
               if (this.unlocked || isUnlocked(getSymbol(), this.nextSymbol)) {
@@ -8057,7 +7534,7 @@ assets:
             lib: core
         extends:
           cgroup: interact
-        lastmod: 1704575411605
+        lastmod: 1709248171950
         uid: T5qkQrDTnNDf3D
         behaviors: []
         baseClass: AnimatedSprite
@@ -8844,7 +8321,7 @@ assets:
             lib: core
         extends:
           cgroup: interact
-        lastmod: 1704573496565
+        lastmod: 1709248189518
         uid: dzFzhGJ9PJ9CHk
         behaviors: []
         baseClass: AnimatedSprite
@@ -9260,9 +8737,9 @@ assets:
                       // unlocked!
                       pThis.unlocked = true;
                       addCanister(symbol);   
-                      sounds.spawn("Wood_End", {volume:0.5});
+                      sounds.play("Wood_End", {volume:0.5});
                   } else {        
-                      sounds.spawn("Sound_Squeaky_Open", {volume:0.5}, switchToPuzzle);
+                      sounds.play("Sound_Squeaky_Open", {volume:0.5}, switchToPuzzle);
                   }
               };
             arguments: {}
@@ -9289,7 +8766,7 @@ assets:
             lib: core
         extends:
           cgroup: interact
-        lastmod: 1704317809199
+        lastmod: 1709117223590
         uid: TQtRCB1Lb457JW
         behaviors: []
         baseClass: AnimatedSprite
@@ -11882,8 +11359,8 @@ assets:
               'y': 0.28467153
             rotation: 0
             uid: 1JBc4p548H4DHQ
-            exts: &ref_10 {}
-            customProperties: &ref_11 {}
+            exts: &ref_8 {}
+            customProperties: &ref_9 {}
           - x: 1090
             'y': 402
             opacity: 1
@@ -11893,8 +11370,8 @@ assets:
               'y': 0.28467153
             rotation: 0
             uid: 1JBc4p548H4DHQ
-            exts: *ref_10
-            customProperties: *ref_11
+            exts: *ref_8
+            customProperties: *ref_9
           - x: 1090
             'y': 445
             opacity: 0
@@ -11904,8 +11381,8 @@ assets:
               'y': 0.28
             rotation: 0
             uid: 1JBc4p548H4DHQ
-            exts: *ref_10
-            customProperties: *ref_11
+            exts: *ref_8
+            customProperties: *ref_9
           - x: 1090
             'y': 488
             opacity: 0
@@ -11915,8 +11392,8 @@ assets:
               'y': 0.28
             rotation: 0
             uid: 1JBc4p548H4DHQ
-            exts: *ref_10
-            customProperties: *ref_11
+            exts: *ref_8
+            customProperties: *ref_9
           - x: 1233.49714286
             'y': 329.39428575
             opacity: 1
@@ -11959,8 +11436,8 @@ assets:
               'y': 0.10285714
             rotation: 0
             uid: PLPH5btfWJw2DL
-            exts: &ref_12 {}
-            customProperties: &ref_13 {}
+            exts: &ref_10 {}
+            customProperties: &ref_11 {}
           - x: 1234.49714286
             'y': 500.39428575
             opacity: 0
@@ -11970,8 +11447,8 @@ assets:
               'y': 0.10285714
             rotation: 0
             uid: PLPH5btfWJw2DL
-            exts: *ref_12
-            customProperties: *ref_13
+            exts: *ref_10
+            customProperties: *ref_11
           - x: 1099
             'y': 192
             opacity: 1
@@ -12388,3 +11865,405 @@ assets:
         panning:
           refDistance: 0.5
           rolloffFactor: 1
+      - name: MonkeyDies
+        uid: RQ394fJmpPkHfk
+        type: sound
+        lastmod: 1709119073205
+        preload: false
+        variants:
+          - uid: DKNTB9PPGQJ2rp
+            source: /home/daniel/winterwell/ctjs/snd-backup/argh.mp3
+        distortion:
+          enabled: false
+          min: 0
+          max: 1
+        pitch:
+          enabled: false
+          min: 0
+          max: 1
+        reverb:
+          enabled: false
+          decayMin: 2
+          decayMax: 2
+          secondsMin: 2
+          secondsMax: 3
+          reverse: false
+        volume:
+          enabled: false
+          min: 0
+          max: 1
+        eq:
+          enabled: false
+          bands:
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+        panning:
+          refDistance: 0.5
+          rolloffFactor: 1
+      - name: Meow
+        uid: LtG62KgQgpLt35
+        type: sound
+        lastmod: 1709119102742
+        preload: true
+        variants:
+          - uid: Fk8L4Dr3K34qfW
+            source: /home/daniel/winterwell/ctjs/snd-backup/meow.mp3
+        distortion:
+          enabled: false
+          min: 0
+          max: 1
+        pitch:
+          enabled: false
+          min: 0
+          max: 1
+        reverb:
+          enabled: false
+          decayMin: 2
+          decayMax: 2
+          secondsMin: 2
+          secondsMax: 3
+          reverse: false
+        volume:
+          enabled: false
+          min: 0
+          max: 1
+        eq:
+          enabled: false
+          bands:
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+        panning:
+          refDistance: 0.5
+          rolloffFactor: 1
+      - name: Sound_Squeaky_Open
+        uid: tGdH7N7cjPkCzn
+        type: sound
+        lastmod: 1709246621299
+        preload: true
+        variants:
+          - uid: 3Pkh75CbLN5f6r
+            source: >-
+              /home/daniel/winterwell/ctjs/snd-backup/turn-crank_squeak_old_metal_machine
+              .ogg
+        distortion:
+          enabled: false
+          min: 0
+          max: 1
+        pitch:
+          enabled: false
+          min: 0
+          max: 1
+        reverb:
+          enabled: false
+          decayMin: 2
+          decayMax: 2
+          secondsMin: 2
+          secondsMax: 3
+          reverse: false
+        volume:
+          enabled: false
+          min: 0
+          max: 1
+        eq:
+          enabled: false
+          bands:
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+        panning:
+          refDistance: 0.5
+          rolloffFactor: 1
+      - name: Sound_Steam
+        uid: jcWDJh2zGPDr61
+        type: sound
+        lastmod: 1709247180808
+        preload: true
+        variants:
+          - uid: BBWkJFKWKQzQ53
+            source: /home/daniel/winterwell/ctjs/snd-backup/steam-101163.mp3
+        distortion:
+          enabled: false
+          min: 0
+          max: 1
+        pitch:
+          enabled: false
+          min: 0
+          max: 1
+        reverb:
+          enabled: false
+          decayMin: 2
+          decayMax: 2
+          secondsMin: 2
+          secondsMax: 3
+          reverse: false
+        volume:
+          enabled: false
+          min: 0
+          max: 1
+        eq:
+          enabled: false
+          bands:
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+            - min: -1
+              max: 1
+        panning:
+          refDistance: 0.5
+          rolloffFactor: 1
+  - type: folder
+    uid: pJDz3rQ3qjkmr4
+    colorClass: act
+    icon: help-circle
+    name: emitters
+    lastmod: 1709115431412
+    entries:
+      - name: SmokeFX
+        uid: LQPG2J26nMpqbt
+        emitters:
+          - uid: pPCjK7HJwgtDQ4
+            texture: Rt6126Rch5W1RK
+            openedTabs:
+              - texture
+              - colors
+              - scaling
+              - velocity
+              - rotation
+              - spawning
+            textureBehavior: textureRandom
+            animatedSingleFramerate: 30
+            settings:
+              delay: 0
+              lifetime:
+                min: 0.5
+                max: 0.5
+              frequency: 0.008
+              spawnChance: 0.92
+              particlesPerWave: 1
+              emitterLifetime: 0
+              maxParticles: 20
+              maxSpeed: 0
+              pos:
+                x: 0
+                'y': 0
+              addAtBack: false
+              behaviors:
+                - type: alpha
+                  config:
+                    alpha:
+                      list:
+                        - value: 0
+                          time: 0
+                        - value: 0.505
+                          time: 0.49603174603174605
+                        - value: 0
+                          time: 1
+                - type: color
+                  config:
+                    color:
+                      list:
+                        - value: ffffff
+                          time: 0
+                        - value: ffffff
+                          time: 0.49603174603174605
+                        - value: ffffff
+                          time: 1
+                - type: blendMode
+                  config:
+                    blendMode: normal
+                - type: scale
+                  config:
+                    scale:
+                      list:
+                        - value: 0.27
+                          time: 0
+                        - value: 0.15
+                          time: 1
+                    minMult: 1
+                - type: moveSpeed
+                  config:
+                    speed:
+                      list:
+                        - value: 300
+                          time: 0
+                        - value: 100
+                          time: 1
+                    minMult: 1
+                - type: spawnShape
+                  config:
+                    type: torus
+                    data:
+                      innerRadius: 0
+                      radius: 64
+                      x: 0
+                      'y': 0
+                      rotation: true
+                - type: rotation
+                  config:
+                    minStart: 0
+                    maxStart: 0
+                    minSpeed: 0
+                    maxSpeed: 0
+                    accel: 0
+        lastmod: 1709115902466
+        type: tandem
+      - name: SparksFX
+        uid: D55GMzH8g1k4zc
+        emitters:
+          - uid: gqbcL3dCrNC4gg
+            texture: mcBfQbq3Wn517h
+            openedTabs:
+              - texture
+              - colors
+              - scaling
+              - velocity
+              - rotation
+              - spawning
+              - shape
+            textureBehavior: textureRandom
+            animatedSingleFramerate: 30
+            settings:
+              delay: 0
+              lifetime:
+                min: 0.5
+                max: 0.5
+              frequency: 0.008
+              spawnChance: 1
+              particlesPerWave: 1
+              emitterLifetime: 0
+              maxParticles: 50
+              maxSpeed: 0
+              pos:
+                x: 0
+                'y': 0
+              addAtBack: false
+              behaviors:
+                - type: alpha
+                  config:
+                    alpha:
+                      list:
+                        - value: 0
+                          time: 0
+                        - value: 1
+                          time: 0.5
+                        - value: 0
+                          time: 1
+                - type: color
+                  config:
+                    color:
+                      list:
+                        - value: ffffff
+                          time: 0
+                        - value: ffffff
+                          time: 0.5
+                        - value: ffffff
+                          time: 1
+                - type: blendMode
+                  config:
+                    blendMode: normal
+                - type: scale
+                  config:
+                    scale:
+                      list:
+                        - value: 1
+                          time: 0
+                        - value: 0.3
+                          time: 1
+                    minMult: 1
+                - type: moveSpeed
+                  config:
+                    speed:
+                      list:
+                        - value: 500
+                          time: 0
+                        - value: 100
+                          time: 1
+                    minMult: 1
+                - type: spawnShape
+                  config:
+                    type: torus
+                    data:
+                      innerRadius: 0
+                      radius: 64
+                      x: 0
+                      'y': 0
+                      rotation: true
+                      affectRotation: true
+                - type: rotation
+                  config:
+                    minStart: 270
+                    maxStart: 0
+                    minSpeed: 0
+                    maxSpeed: 90
+                    accel: 0
+            showShapeVisualizer: true
+        lastmod: 1709116117176
+        type: tandem
