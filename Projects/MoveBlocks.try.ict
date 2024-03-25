@@ -1363,7 +1363,7 @@ assets:
             bindings: {}
         tiles: []
         extends: {}
-        lastmod: 1708678695155
+        lastmod: 1709314198792
         events:
           - eventKey: OnRoomStart
             code: |-
@@ -1437,6 +1437,7 @@ assets:
 
                   // Bridge + Captain
                   let rbridge = templates.copy("bridge");
+                  rbridge.zIndex = 200;
                   rbridge.tint = 0xCCCCCC; // darken
                   // console.log("scale 0",this.height, rbridge.height);
                   let scale = 600 / rbridge.height;
@@ -4944,18 +4945,7 @@ assets:
         name: Room_Bridge
         backgroundColor: '#000000'
         follow: -1
-        backgrounds:
-          - depth: 0
-            texture: cbG3pR17pMHpmp
-            shiftX: 0
-            shiftY: -408
-            parallaxX: 1
-            parallaxY: 1
-            movementX: 0
-            movementY: 0
-            scaleX: 1.4
-            scaleY: 1.4
-            repeat: no-repeat
+        backgrounds: []
         copies:
           - x: 576
             'y': 192
@@ -6799,7 +6789,7 @@ assets:
       - type: template
         name: bridge
         depth: 0
-        texture: cbG3pR17pMHpmp
+        texture: G6bqL1B9C3GzJ9
         playAnimationOnStart: false
         loopAnimation: true
         animationFPS: 30
@@ -6810,15 +6800,16 @@ assets:
             code: this.move();
             arguments: {}
         extends: {}
-        lastmod: 1702057442313
+        lastmod: 1709314444446
         uid: bc9twq1FdGDzKN
         behaviors: []
-        baseClass: AnimatedSprite
+        baseClass: NineSlicePlane
         nineSliceSettings:
-          left: 16
           top: 16
-          right: 16
+          left: 16
           bottom: 16
+          right: 16
+          autoUpdate: false
         style: -1
       - type: template
         name: Block
@@ -10381,40 +10372,6 @@ assets:
         isBlank: false
         group: !<tag:yaml.org,2002:js/undefined> ''
         source: /home/daniel/ct.js/img/code-blank.png
-      - lastmod: 1701008736045
-        type: texture
-        name: >-
-          DALL·E_2023-11-26_14.05.24_-_An_updated_version_of_the_backdrop_for_a_2D_game,_depicting_the_bridge_of_a_steampunk_spaceship,_now_with_more_space_for_people._Retain_the_original_r
-        untill: 0
-        grid:
-          - 1
-          - 1
-        axis:
-          - 0
-          - 0
-        marginx: 0
-        marginy: 0
-        imgWidth: 1024
-        imgHeight: 1024
-        width: 1024
-        height: 1024
-        offx: 0
-        offy: 0
-        origname: icbG3pR17pMHpmp.png
-        shape: rect
-        left: 0
-        right: 1024
-        top: 0
-        bottom: 1024
-        uid: cbG3pR17pMHpmp
-        padding: 1
-        isBlank: false
-        group: !<tag:yaml.org,2002:js/undefined> ''
-        source: >-
-          /home/daniel/ct.js/img/DALL·E 2023-11-26 14.05.24 - An updated version
-          of the backdrop for a 2D game, depicting the bridge of a steampunk
-          spaceship, now with more space for people. Retain the original r.png
-        tiled: true
       - lastmod: 1702724808211
         type: texture
         name: pipe-end-block
@@ -11698,6 +11655,34 @@ assets:
         isBlank: false
         group: !<tag:yaml.org,2002:js/undefined> ''
         source: /home/daniel/ct.js/img/chimp-96x3.png
+      - lastmod: 1709314388177
+        type: texture
+        name: steampunk-ship-bridge
+        untill: 0
+        grid:
+          - 1
+          - 1
+        axis:
+          - 0
+          - 0
+        marginx: 0
+        marginy: 0
+        imgWidth: 1024
+        imgHeight: 951
+        width: 1024
+        height: 951
+        offx: 0
+        offy: 0
+        origname: iG6bqL1B9C3GzJ9.png
+        shape: rect
+        left: 0
+        right: 1024
+        top: 0
+        bottom: 951
+        uid: G6bqL1B9C3GzJ9
+        padding: 1
+        isBlank: false
+        source: /home/daniel/winterwell/ctjs/img.backup/steampunk-ship-bridge.png
   - type: folder
     uid: rCW5ThhMWqR6gM
     colorClass: act
