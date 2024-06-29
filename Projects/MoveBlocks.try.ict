@@ -1,5 +1,28 @@
-ctjsVersion: 4.0.2
+ctjsVersion: 5.0.1
 notes: >
+
+  ## Bugs
+
+
+  Z-index: 
+
+  - Monkey behind canister machine
+
+  - Messages behind backdrop
+
+
+  Door open code: if you have 3 canisters, the 3rd canister is not shown
+
+
+  New game: remembers monkey start position
+
+
+  Restart Room: forgets room layout
+
+
+  There is an "impossible to go up" room layout
+
+
   /*
 
 
@@ -91,7 +114,7 @@ actions:
       - code: keyboard.Space
 scripts:
   - name: utils
-    code: "\ndebugger; // does nothing\n\nlet seed = Math.floor(Math.random()*1000);\n\nconst randomizer = random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return randomizer() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(randomizer()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/**\n * for consuming Esc keypresses\n */\nlet lastEsc = 0;\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nUI = {};\n\nfunction check(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n\n\nasync function pause(msecs) {\n    let p = timer.add(msecs);\n    await p;\n}\n\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\n/**\n * Like addText but idempotent. Sets pBlock.pText\n */\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    check( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        check(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text, options={}) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.x = rooms.current.width / 3;\n    pTextBlock.width = rooms.current.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (this.pTooltip) {\n        if (this.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    this.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if ( ! this.pTooltip) return;\n    try {        \n        this.pTooltip.destroy();\n        this.pTooltip = null;        \n    } catch(err) {  // swallow any error\n        console.warn(err);\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\n/**\n * @returns {PIXI.Text} pText\n */\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    check(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    check(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n/**\n * @param {PIXI.Sprite} pSprite\n * @param {Chat|string} chat\n */\nfunction doTalk(pSprite, chat) {\n    if (typeof(chat)===\"string\") {\n        chat = new Chat(chat); // convert\n    }\n    if (pSprite.pTalkToMe) {\n        pSprite.pTalkToMe.kill = true;\n        pSprite.pTalkToMe = null;\n    }\n    // cat sound?\n    if (chat.sound && ! chat.soundPlayed) {\n        chat.soundPlayed = true;\n        sounds.play(chat.sound, {volume:0.5});\n    }\n\n    // chain async calls to step through the text\n    const control = {};\n    let p = null;\n    chat.lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    // talking promise\n    p = p.then(() => { \n        pSprite.talking = null; \n        console.log(\"null talking\",pSprite.pSpeechBubble);\n    });\n    check(p);\n    pSprite.talking = p;\n    // follow on action - like move room?\n    if (chat.then) {\n        p = p.then(chat.then);\n    }\n    return p;\n}\n\nasync function doTalk2(pSprite, chatLine, control) {\n    const text = chatLine.text;\n    check(text, chatLine);\n    if (control.stop) {\n        console.log(\"stop talking\", chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }    \n    let sx = pSprite.x-20;\n    let sy = pSprite.y - pSprite.height;\n    if (sy < 200) {\n        console.log(\"shift left\");\n        sy = 220;\n        sx -= 50;\n    }    \n    pSprite.pSpeechBubble = templates.copyIntoRoom(\"speech-bubble\", sx, sy, rooms.current);\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth}); //verticalCenter:true\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n    // console.log(\"pSprite.pSpeechBubble\", pSprite.pSpeechBubble, sx, sy);\n\n    var ttimer = timer.add(msecs,'talk');\n    let promise = ttimer.then(() => {\n        chatLine.done = true;\n        // console.log(\"done \"+text, chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\nfunction offerTalk(pSprite) {\n    if (pSprite.pTalkToMe || pSprite.pSpeechBubble) return;\n    if (this.chat && this.chat.lines.find(line => ! line.done)) {\n        if ( ! this.pTalkToMe) {\n            this.pTalkToMe = templates.copy(\"speech-bubble\", -5, -this.height -5);\n            this.addChild(this.pTalkToMe);\n            this.pTalkToMe.scale.x = 0.25;\n            this.pTalkToMe.scale.y = 0.25;            \n        }\n        this.pTalkToMe.visible = true;\n        this.pTalkToMe.alpha = 0.75;\n    }    \n}\n\nlet lastMove = new Date().getTime() - 2000;\nlet moving = false;\n\n/**\n  HACK: set playerx, playery for the room you are _leaving_\n * @param {!string} roomName * no-op if already in the room AND options arent modified\n * @param {?Object} options update state for roomName\n * @param {?Object} moveOptions {transition:none|??}\n */\nfunction moveRoom(roomName, options, moveOptions) {\n    console.log(\"moveRoom\",roomName, options,moveOptions); // for debug\n    if (moving) return; // no overlaps\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    if (rooms.current.name === roomName) { // paranoia\n        rooms.current.alpha = 1.0; // ensure fully on\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = options && Object.entries(options).find(([k,v]) => ro[k] !== v);\n        if ( ! mod) {\n            moving = false;\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n        console.log(\"moveRoom\",roomName, \"mod\",mod);\n    }\n    // anti-flicker\n    lastMove = new Date().getTime();\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // stash player x/y on the leaving room\n    // NB: If we move from Room_PLatformer X to Room_PLatformer Y -- the later updateRoomState can set x or y\n    let player = getPlayer();\n    if (player) {\n        let leaveState = {playerx: player.x, playery: player.y};\n        updateRoomState(rooms.current.name, leaveState);\n    }\n    const moveRoom2 = () => {\n        moving = false;\n        // // close modal?\n        // if (UI.modal) {\n        //     rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            updateRoomState(roomName, options);\n        }\n        // ensure fully on\n        setTimeout(() => {rooms.current.alpha = 1.0;}, 1);\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    moving = true;\n    transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(rooms.current, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction doKillMonster(pSnake) {\n    if (pSnake.dying) return;\n    pSnake.depth = 100;\n    pSnake.dying = true;\n    pSnake.dx = 0;\n    if (pSnake.dieTex) pSnake.tex = pSnake.dieTex;\n    pSnake.play(); \n    let smaller = pSnake.scale.y * 0.8;\n    tween.add({\n        obj:pSnake.scale,\n        duration:300,\n        fields: {\n            y: smaller,\n            x: smaller\n        }\n    }).then(() => pSnake.kill = true);\n}\n\nfunction remove(array, item) {\n    check(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    check(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};\n\n/**\n * Fix bug (dec 2023) where scale is ignored\n */\nfunction getBounds(pSprite) {\n    if ( ! pSprite.shape) {\n        console.log(\"no shape\",pSprite);\n        return pSprite.getBounds();\n    }\n\tlet h = pSprite.height;\n\tlet w = pSprite.width;\n\tlet {left,right,top,bottom, type, r} = pSprite.shape;\n\t// scale\n\tif (pSprite.scale.y) {\n\t\ttop *= pSprite.scale.y;\n\t\tbottom *= pSprite.scale.y;\n\t\tr *= pSprite.scale.y;\n\t}\n\tif (pSprite.scale.x) {\n\t\tleft *= pSprite.scale.x;\n\t\tright *= pSprite.scale.x;\n\t}\n\tlet b1;\n\tif (type===\"circle\") {\n\t\tb1 = {\n\t\t\tx: pSprite.x - r, \n\t\t\ty: pSprite.y - r,\n\t\t\twidth: 2*r, \n\t\t\theight: 2*r\n\t\t};\n\t} else {\n\t\tb1 = {\n\t\t\tx: pSprite.x - left, \n\t\t\ty: pSprite.y - top,\n\t\t\twidth: right - left, //;left - right, \n\t\t\theight: top - bottom\n\t\t};\n\t}\n\tcheck(b1.height >= -0.1, b1); // allow maths precision\n\tcheck(b1.width >= -0.1, b1);\n    // console.log(\"boundsshape\",pSprite);\n    return b1;\n}\n\n\nlet pg1, pg2;\n/**\n * @returns {boolean} box collision test\n */\nfunction testBoxCollision(bounds1, bounds2)\n{\n    console.log(\"testBoxCollision\",bounds1, bounds2);\n    let hit = bounds1.x < bounds2.x + bounds2.width\n        && bounds1.x + bounds1.width > bounds2.x\n        && bounds1.y < bounds2.y + bounds2.height\n        && bounds1.y + bounds1.height > bounds2.y;\n        // debug\n    // if ( ! this.pg1) {\n    //     let pg1 = new PIXI.Graphics();\n    //     this.pg1 = pg1;\n    //     rooms.current.addChild(this.pg1);            \n    //     let pg2 = new PIXI.Graphics();\n    //     this.pg2 = pg2;\n    //     rooms.current.addChild(this.pg2);            \n    // }\n    // this.pg1.clear();\n    // this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);\n    // this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);\n    // this.pg1.beginFill(0xCCFFCC,1);\n    // this.pg1.drawCircle(bounds1.x, bounds1.y, 3);\n\n    // this.pg2.clear();\n    // this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);\n    // this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);\n    // this.pg2.beginFill(0xCCCCFF,1);\n    // this.pg2.drawCircle(bounds2.x, bounds2.y, 3);\n\n    return hit;\n}\n\n// override to put in on/off control\nconst _spawn = sounds.play;\nsounds.play = function soundSpawn(name, options, callback) {\n    if (callback) {\n        options.complete = callback; // upgrade to ctjs v4\n        console.warn(\"old sounds code use complete\");\n    }\n    if (getOption(\"sound\")) {\n        try {\n            _spawn(name, options);\n        } catch (err) {\n            console.error(err); // swallow\n        }\n    } else if (options?.complete) {\n        // better do the callback anyway, after a short pause\n        timer.add(400).then(options.complete);\n    }\n}\nlet MUSIC_VOLUME = 0.5;\nfunction musicSpawn(name, options={}) {\n    musicOff();\n    if (getOption(\"music\")) {\n        if ( ! options.volume) options.volume = MUSIC_VOLUME;\n        let musicAudio = sounds.play(name, options);\n        console.log(\"musicAudio\",musicAudio);\n    }\n}\nfunction musicOff() {\n    try {\n        sounds.stop();\n        // Object.values(res.sounds).forEach(snd => snd.stop());\n    } catch(paranoia) {\n        console.error(paranoia);\n    }\n}\n\n\nasync function pulse(pSprite, tint=0x9999ff, pChimp) {\n    if (pSprite._pulse) return;    \n    // pSprite._pulse = new Date().getTime(); // tween??\n    try {\n        pSprite.tint = tint;\n        await pause(200);\n        while(pChimp && place.collide(pChimp, pSprite)) {\n            await pause(100);\n        }\n        pSprite.tint = 0xffffff;\n        pSprite._pulse = null;\n    } catch(ohwell) {\n        // console.log(\"(skip) pulse error\",ohwell); // harmless\n    }\n};\n\n// HACK fix bug Jan 2024\nconst _onDestroy = templates.onDestroy;\nfunction od2(args) {    \n    // console.warn(\"onDestroy this\", this, args);\n    try {\n        _onDestroy.apply(this, args);\n    } catch(wtf) {\n        console.error(\"onDestroy\", wtf, this);\n    }\n};\ntemplates.onDestroy = od2;\n\n\n// // HACK fix merge / tilemap cache bug Feb 2024 https://github.com/ct-js/ct-js/issues/501\n// const _tmc = Tilemap.cache;\n// Tilemap.cache = function tmc2(args) {    \n//     try {\n//         _tmc.apply(this, args);\n//     } catch(wtf) {\n//         console.error(\"Tilemap cache (swallow)\", wtf, this);\n//     }\n// };\n// const _tm_p = Tilemap.__proto__;  Class constructor wd cannot be invoked without 'new'\n// Tilemap.__proto__ = function tm_p2(args) {\n//     let tm = _tm_p.apply(this, args);\n//     tm.cache = Tilemap.cache;\n//     return tm;\n// }\n"
+    code: "\ndebugger; // does nothing\n\nlet seed = Math.floor(Math.random()*1000);\n\nconst randomizer = random.createSeededRandomizer(seed);\n\nfunction getRandomChoice(p) {\n    return randomizer() > p;\n}\nfunction getRandomMember(set) {\n    let i = Math.floor(randomizer()*set.length);\n    // console.log(\"random\",i,set.length,set);\n    return set[i];\n}\n\n/**\n * for consuming Esc keypresses\n */\nlet lastEsc = 0;\n\n/** collect UI widgets from elsewhere \n * modal (room)\n*/\nlet UI = {};\nwindow.UI = UI;\n\nfunction check(a, ...msg) {\n    if (a) return;\n    console.error(...msg);\n}\n\nlet logged1 = [];\nfunction log1(...msgs) {\n    let msg = msgs.join(\", \");\n    if (contains(msg, logged1)) {\n        return;\n    }\n    logged1.push(msg);\n    console.log(msg);\n}\n\n\nasync function pause(msecs) {\n    let p = timer.add(msecs);\n    await p;\n}\n\n/**\n * @param {Room} room\n * @param {string} templateName\n */\nfunction getTemplates(room, templateName) {\n    return templates.list[templateName].filter(tmp => tmp.getRoom() === room);\n}\n\n/**\n * Like addText but idempotent. Sets pBlock.pText\n */\nfunction setText(pBlock, text, x, y, options) {\n    // if ( ! pBlock.dwid) pBlock.dwid = \"p\"+Math.floor(Math.random()*1000);\n    // console.log(\"setText\", text, pBlock);\n    check( ! text || typeof(text)===\"string\",text);\n    if (pBlock.pText) {\n        if (pBlock.pText.text === text) {\n            // console.log(\"no-op\", text);\n            return; // no-op\n        }\n        // console.log(\"destroy\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n        pBlock.pText.destroy();\n        pBlock.pText = null;\n    }\n    if (text) {\n        pBlock.pText = addText(pBlock, text, x, y, options);\n        check(pBlock.pText.text === text, text+\" vs \"+pBlock.pText.text);\n        // console.log(\"set-add\", this.dwid, \"old\", this.pText.text, \"new text\", text, this.pText);\n    }\n}\n\nfunction showMessage(text, options={}) {\n    console.log(\"showMessage\", text);\n    let pTextBlock = templates.copy(\"TextBlock\", 100, 500);\n    pTextBlock.zIndex = 2000;\n    pTextBlock.x = rooms.current.width / 3;\n    pTextBlock.width = rooms.current.width / 4;\n    pTextBlock.height = 80;\n    setText(pTextBlock, text, 10, 10);\n    // remove\n    timer.addUi(2000)\n    .then(() => {\n        pTextBlock.kill = true;\n    });\n}\n\nfunction showTooltip(pBlock, text) {\n    if (UI.pTooltip) {\n        if (UI.pTooltip.text === text) {\n            return; // no-op\n        }\n        hideTooltip(pBlock);\n    }\n    UI.pTooltip = addText(pBlock, text, 0, -20, {style:\"Style_Tooltip\"});\n}\nfunction hideTooltip(pBlock) {\n    if ( ! UI.pTooltip) return;\n    try {        \n        UI.pTooltip.destroy();\n        UI.pTooltip = null;        \n    } catch(err) {  // swallow any error\n        console.warn(err);\n    }\n}\n\nconst ADDTEXT_DEFAULT_OPTIONS = {style:\"Style_BodyText\"};\n\n/**\n * @returns {PIXI.Text} pText\n */\nfunction addText(pBlock, text, x, y, options=ADDTEXT_DEFAULT_OPTIONS) {\n    check(typeof(text)===\"string\", text);\n    options = Object.assign({}, ADDTEXT_DEFAULT_OPTIONS, options); // merge options\n    let style = styles.get(options.style);\n    if (options.wordWrap) {\n        let www = options.wordWrapWidth;\n        if ( ! www) {\n            www = Math.min(pBlock.width, 450); // x offset??\n        }\n        style.wordWrap = true;        \n        style.wordWrapWidth = www;\n        console.log(\"wordWrapWidth\", www, \"options\",options, \"style\",style, \"pw\",pBlock.width);\n    }\n    let ptext = new PIXI.Text(text, style);\n    if (x) ptext.x = x;\n    if (y) ptext.y = y;\n    // reverse scale\n    let preScaleWidth = ptext.width;\n    let preScaleHeight = ptext.height;\n    // console.log(text,\"prescale width\",ptext.width, \"h\",ptext.height);\n    if (pBlock.scale?.x) {\n        ptext.scale.x = 1 / pBlock.scale.x;\n    }\n    if (pBlock.scale?.y) {\n        ptext.scale.y = 1 / pBlock.scale.y;\n    }\n    // console.log(\"BUG\",text,\"post-scale width\",ptext.width, \"scale-x\", ptext.scale.x, \"block-width\",pBlock.width);\n    if (options.center) {\n        let sx = (pBlock.width - preScaleWidth) / 2;\n        ptext.x = sx * ptext.scale.x;\n    }\n    if (options.verticalCenter) {\n        let th = preScaleHeight; //ptext.height;\n        let sy = (pBlock.height - th) / 2;\n        // console.log(\"vcenter\", \"b-h\", pBlock.height, \"t-h\", ptext.height, \"sy\", sy, \"scale.y\", ptext.scale.y);\n        ptext.y = sy * ptext.scale.y;\n    }\n    pBlock.addChild(ptext);\n    ptext.zIndex = 2000;\n\n    // const mask = new PIXI.Graphics()\n    // mask.beginFill(0xff0000)\n    // mask.drawCircle(ptext.x, ptext.y, 3);\n    // pBlock.addChild(mask);\n\n    check(ptext.text === text, ptext.text, text);\n    // console.log(\"addText\", text, \"x\", ptext.x, \"y\", ptext.y, style, options, ptext);\n    return ptext;\n}\n\nlet msecs = 2300;\n\n\n/**\n * @param {PIXI.Sprite} pSprite\n * @param {Chat|string} chat\n */\nfunction doTalk(pSprite, chat) {\n    if (typeof(chat)===\"string\") {\n        chat = new Chat(chat); // convert\n    }\n    if (pSprite.pTalkToMe) {\n        pSprite.pTalkToMe.kill = true;\n        pSprite.pTalkToMe = null;\n    }\n    // cat sound?\n    if (chat.sound && ! chat.soundPlayed) {\n        chat.soundPlayed = true;\n        sounds.play(chat.sound, {volume:0.5});\n    }\n\n    // chain async calls to step through the text\n    const control = {};\n    let p = null;\n    chat.lines.forEach(line => {\n        if (p) {\n            p = p.then(() => doTalk2(pSprite, line, control));\n            p.control = control;\n        } else {\n            p = doTalk2(pSprite, line, control);\n            p.control = control;\n        }\n    });\n    // talking promise\n    p = p.then(() => { \n        pSprite.talking = null; \n        console.log(\"null talking\",pSprite.pSpeechBubble);\n    });\n    check(p);\n    pSprite.talking = p;\n    // follow on action - like move room?\n    if (chat.then) {\n        p = p.then(chat.then);\n    }\n    return p;\n}\n\nasync function doTalk2(pSprite, chatLine, control) {\n    const text = chatLine.text;\n    check(text, chatLine);\n    if (control.stop) {\n        console.log(\"stop talking\", chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    }\n    if (pSprite.pSpeechBubble) {\n        // console.warn(\"speech bubble already?\", text, \"already:\"+pSprite.pSpeechBubble.ptext?.text);\n        return;\n    }    \n    let sx = pSprite.x-20;\n    let sy = pSprite.y - pSprite.height;\n    if (sy < 200) {\n        console.log(\"shift left\");\n        sy = 220;\n        sx -= 50;\n    }    \n    pSprite.pSpeechBubble = templates.copyIntoRoom(\"speech-bubble\", sx, sy, rooms.current);\n    let scale = Math.min(Math.max(1, text.length * 2.0 / 40), 2);\n    pSprite.pSpeechBubble.scale.x = scale;\n    pSprite.pSpeechBubble.scale.y = scale;\n    let wordWrapWidth = pSprite.pSpeechBubble.width - 60;\n    pSprite.pSpeechBubble.zIndex = 1500;\n\n    let ptext = addText(pSprite.pSpeechBubble, text, -130, -100, {wordWrap:true, wordWrapWidth}); //verticalCenter:true\n    pSprite.pSpeechBubble.ptext = ptext;\n    ptext.scale.x = 1/scale;\n    ptext.scale.y = 1/scale;\n    console.log(\"doTalk2 z ptext\", ptext.zIndex, \"pSprite.pSpeechBubble\", pSprite.pSpeechBubble.zIndex, \"pSprite\", pSprite.zIndex);\n\n    var ttimer = timer.add(msecs,'talk');\n    let promise = ttimer.then(() => {\n        chatLine.done = true;\n        // console.log(\"done \"+text, chatLine);\n        if (pSprite.pSpeechBubble) {\n            pSprite.pSpeechBubble.kill = true;\n        }\n        pSprite.pSpeechBubble = null;\n    });\n    await promise;\n}\n\n\nfunction offerTalk(pSprite) {\n    if (pSprite.pTalkToMe || pSprite.pSpeechBubble) return;\n    if (pSprite.chat && pSprite.chat.lines.find(line => ! line.done)) {\n        if ( ! pSprite.pTalkToMe) {\n            pSprite.pTalkToMe = templates.copy(\"speech-bubble\", -5, -pSprite.height -5);\n            pSprite.addChild(pSprite.pTalkToMe);\n            pSprite.pTalkToMe.scale.x = 0.25;\n            pSprite.pTalkToMe.scale.y = 0.25;            \n        }\n        pSprite.pTalkToMe.visible = true;\n        pSprite.pTalkToMe.alpha = 0.75;\n    }    \n}\n\nlet lastMove = new Date().getTime() - 2000;\nlet moving = false;\n\n/**\n  HACK: set playerx, playery for the room you are _leaving_\n * @param {!string} roomName * no-op if already in the room AND options arent modified\n * @param {?Object} options update state for roomName\n * @param {?Object} moveOptions {transition:none|??}\n */\nfunction moveRoom(roomName, options, moveOptions) {\n    console.log(\"moveRoom\",roomName, options,moveOptions); // for debug\n    if (moving) return; // no overlaps\n    // avoid flickering\n    if (new Date().getTime() - lastMove < 1000) {\n        console.log(\"moveRoom - skip - anti-flicker\");\n        return;\n    }\n    if (rooms.current.name === roomName) { // paranoia\n        rooms.current.alpha = 1.0; // ensure fully on\n        // change options?\n        let ro = roomOptions[roomName] || {};\n        let mod = options && Object.entries(options).find(([k,v]) => ro[k] !== v);\n        if ( ! mod) {\n            moving = false;\n            console.log(\"moveRoom no-op\", roomName);    \n            return;\n        }\n        console.log(\"moveRoom\",roomName, \"mod\",mod);\n    }\n    // anti-flicker\n    lastMove = new Date().getTime();\n    console.log(\"moveRoom\", roomName, options, moveOptions);\n    // stash player x/y on the leaving room\n    // NB: If we move from Room_PLatformer X to Room_PLatformer Y -- the later updateRoomState can set x or y\n    let player = getPlayer();\n    if (player) {\n        let leaveState = {playerx: player.x, playery: player.y};\n        updateRoomState(rooms.current.name, leaveState);\n    }\n    const moveRoom2 = () => {\n        moving = false;\n        // // close modal?\n        // if (UI.modal) {\n        //     rooms.remove(UI.modal);\n        //     UI.modal = null;\n        // }\n        // switch\n        rooms.switch(roomName);\n        // pass on options\n        if (options) {\n            updateRoomState(roomName, options);\n        }\n        // ensure fully on\n        setTimeout(() => {rooms.current.alpha = 1.0;}, 1);\n    };\n    if (moveOptions?.transition === \"none\") {\n        moveRoom2();\n        return;\n    }\n    moving = true;\n    transition.slideOut()\n        .then(moveRoom2);\n}\n\nfunction getPlayer() {\n    let chimp = getTemplates(rooms.current, \"chimp\")[0];\n    if (chimp) return chimp;\n};\n\nfunction doKillMonster(pSnake) {\n    if (pSnake.dying) return;\n    pSnake.depth = 100;\n    pSnake.dying = true;\n    pSnake.dx = 0;\n    if (pSnake.dieTex) pSnake.tex = pSnake.dieTex;\n    pSnake.play(); \n    let smaller = pSnake.scale.y * 0.8;\n    tween.add({\n        obj:pSnake.scale,\n        duration:300,\n        fields: {\n            y: smaller,\n            x: smaller\n        }\n    }).then(() => pSnake.kill = true);\n}\n\nfunction remove(array, item) {\n    check(Array.isArray(array), \"Not an array\"+array);\n    let i = array.indexOf(item);\n    if (i===-1) return array; \n    array.splice(i,1);\n    return array;\n}\n\nfunction getCompassCorner(pSprite) {\n    let ns = pSprite.y < 300? \"N\" : \"S\";\n    let ew = pSprite.x < 300? \"W\" : \"E\";\n    return ns+ew;\n}\n\n/**\n Object at xy or null\n */\nfunction getGridEntry(grid, xy) {\n    check(grid && xy);\n    const row = grid[xy[1]];\n    if ( ! row) return null;\n    return row[xy[0]];\n}\n\nfunction isMobile() {\n\tconst userAgent = navigator?.userAgent || navigator?.vendor || window.opera;\n\tlet _isMobile = userAgent.match('/mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i');\n\treturn !!_isMobile;\n};\n\n/**\n * Fix bug (dec 2023) where scale is ignored\n */\nfunction getBounds(pSprite) {\n    if ( ! pSprite.shape) {\n        console.log(\"no shape\",pSprite);\n        return pSprite.getBounds();\n    }\n\tlet h = pSprite.height;\n\tlet w = pSprite.width;\n\tlet {left,right,top,bottom, type, r} = pSprite.shape;\n\t// scale\n\tif (pSprite.scale.y) {\n\t\ttop *= pSprite.scale.y;\n\t\tbottom *= pSprite.scale.y;\n\t\tr *= pSprite.scale.y;\n\t}\n\tif (pSprite.scale.x) {\n\t\tleft *= pSprite.scale.x;\n\t\tright *= pSprite.scale.x;\n\t}\n\tlet b1;\n\tif (type===\"circle\") {\n\t\tb1 = {\n\t\t\tx: pSprite.x - r, \n\t\t\ty: pSprite.y - r,\n\t\t\twidth: 2*r, \n\t\t\theight: 2*r\n\t\t};\n\t} else {\n\t\tb1 = {\n\t\t\tx: pSprite.x - left, \n\t\t\ty: pSprite.y - top,\n\t\t\twidth: right - left, //;left - right, \n\t\t\theight: top - bottom\n\t\t};\n\t}\n\tcheck(b1.height >= -0.1, b1); // allow maths precision\n\tcheck(b1.width >= -0.1, b1);\n    // console.log(\"boundsshape\",pSprite);\n    return b1;\n}\n\n\nlet pg1, pg2;\n/**\n * @returns {boolean} box collision test\n */\nfunction testBoxCollision(bounds1, bounds2)\n{\n    console.log(\"testBoxCollision\",bounds1, bounds2);\n    let hit = bounds1.x < bounds2.x + bounds2.width\n        && bounds1.x + bounds1.width > bounds2.x\n        && bounds1.y < bounds2.y + bounds2.height\n        && bounds1.y + bounds1.height > bounds2.y;\n        // debug\n    // if ( ! this.pg1) {\n    //     let pg1 = new PIXI.Graphics();\n    //     this.pg1 = pg1;\n    //     rooms.current.addChild(this.pg1);            \n    //     let pg2 = new PIXI.Graphics();\n    //     this.pg2 = pg2;\n    //     rooms.current.addChild(this.pg2);            \n    // }\n    // this.pg1.clear();\n    // this.pg1.beginFill(hit? 0xFFCCCC : 0xCCFFCC, 0.5);\n    // this.pg1.drawRect(bounds1.x,bounds1.y,bounds1.width,bounds1.height);\n    // this.pg1.beginFill(0xCCFFCC,1);\n    // this.pg1.drawCircle(bounds1.x, bounds1.y, 3);\n\n    // this.pg2.clear();\n    // this.pg2.beginFill(hit? 0xFFFFCC : 0xCCCCFF, 0.5);\n    // this.pg2.drawRect(bounds2.x,bounds2.y,bounds2.width,bounds2.height);\n    // this.pg2.beginFill(0xCCCCFF,1);\n    // this.pg2.drawCircle(bounds2.x, bounds2.y, 3);\n\n    return hit;\n}\n\n// override to put in on/off control\nconst _spawn = sounds.play;\nsounds.play = function soundSpawn(name, options, callback) {\n    if (callback) {\n        options.complete = callback; // upgrade to ctjs v4\n        console.warn(\"old sounds code use complete\");\n    }\n    if (getOption(\"sound\")) {\n        try {\n            _spawn(name, options);\n        } catch (err) {\n            console.error(err); // swallow\n        }\n    } else if (options?.complete) {\n        // better do the callback anyway, after a short pause\n        timer.add(400).then(options.complete);\n    }\n}\nlet MUSIC_VOLUME = 0.5;\nfunction musicSpawn(name, options={}) {\n    musicOff();\n    if (getOption(\"music\")) {\n        if ( ! options.volume) options.volume = MUSIC_VOLUME;\n        let musicAudio = sounds.play(name, options);\n        console.log(\"musicAudio\",musicAudio);\n    }\n}\nfunction musicOff() {\n    try {\n        sounds.stop();\n        // Object.values(res.sounds).forEach(snd => snd.stop());\n    } catch(paranoia) {\n        console.error(paranoia);\n    }\n}\n\n\nasync function pulse(pSprite, tint=0x9999ff, pChimp) {\n    if (pSprite._pulse) return;    \n    // pSprite._pulse = new Date().getTime(); // tween??\n    try {\n        pSprite.tint = tint;\n        await pause(200);\n        while(pChimp && place.collide(pChimp, pSprite)) {\n            await pause(100);\n        }\n        pSprite.tint = 0xffffff;\n        pSprite._pulse = null;\n    } catch(ohwell) {\n        // console.log(\"(skip) pulse error\",ohwell); // harmless\n    }\n};\n\n// HACK fix bug Jan 2024\nconst _onDestroy = templates.onDestroy;\nfunction od2(args) {    \n    // console.warn(\"onDestroy this\", this, args);\n    try {\n        _onDestroy.apply(this, args);\n    } catch(wtf) {\n        console.error(\"onDestroy\", wtf, this);\n    }\n};\ntemplates.onDestroy = od2;\n\n\n// // HACK fix merge / tilemap cache bug Feb 2024 https://github.com/ct-js/ct-js/issues/501\n// const _tmc = Tilemap.cache;\n// Tilemap.cache = function tmc2(args) {    \n//     try {\n//         _tmc.apply(this, args);\n//     } catch(wtf) {\n//         console.error(\"Tilemap cache (swallow)\", wtf, this);\n//     }\n// };\n// const _tm_p = Tilemap.__proto__;  Class constructor wd cannot be invoked without 'new'\n// Tilemap.__proto__ = function tm_p2(args) {\n//     let tm = _tm_p.apply(this, args);\n//     tm.cache = Tilemap.cache;\n//     return tm;\n// }\n"
   - name: element-info
     code: |-
 
@@ -1218,11 +1241,11 @@ settings:
   authoring:
     author: Daniel Winterstein
     site: 'https://winterstein.me.uk'
-    title: Periodic Spaceship Migration Pain
+    title: Periodic Spaceship upgrade 5 pain
     version:
       - 0
       - 2
-      - 0
+      - 1
     versionPostfix: ''
   rendering:
     usePixiLegacy: false
@@ -1249,6 +1272,9 @@ settings:
       sound: false
       style: false
       tandem: false
+      typefaces: !<tag:yaml.org,2002:js/undefined> ''
+    showErrors: true
+    errorsLink: ''
   branding:
     icon: PDFfhPGNbzdTbw
     accent: '#446adb'
@@ -1363,7 +1389,7 @@ assets:
             bindings: {}
         tiles: []
         extends: {}
-        lastmod: 1709314198792
+        lastmod: 1719683336903
         events:
           - eventKey: OnRoomStart
             code: |-
@@ -1387,6 +1413,7 @@ assets:
               this.sortableChildren = true;
               this.sortChildren();
 
+              // How is skipped set??
               async function doAnimate() {
                   // move ship
                   let p = tween.add({
@@ -1423,7 +1450,7 @@ assets:
                   });
 
                   await p;
-                  if (this.skipped) return; 
+                  if (This.skipped) return; 
                   pAsteroid.visible = false;
                   pAsteroid.kill;
 
@@ -1456,12 +1483,14 @@ assets:
                   // await slideIn;
 
                   let sailor = templates.copy("sailor");
+                  sailor.zIndex = rbridge.zIndex + 1;
                   sailor.scale.x = -0.5;
                   sailor.scale.y = 0.5;
                   sailor.x = rbridge.x + 450;
                   sailor.y = rbridge.y + 500;
 
                   let captain = templates.copy("captain");
+                  captain.zIndex = rbridge.zIndex + 1;
                   captain.tex = "captain-2";
                   captain.scale.x = -0.5;
                   captain.scale.y = 0.5;
@@ -1470,10 +1499,10 @@ assets:
                   await timer.add(500);
                   await doTalk(sailor, "Captain! It's an emergency!");
                   await doTalk(captain, "Nonsense! I've seen worse.");
-                 if (this.skipped) return;
+                 if (This.skipped) return;
 
                   await doTalk(sailor, "The engines have failed!");
-                  if (this.skipped) return;
+                  if (This.skipped) return;
 
                   // black hole!
                   endx = pBlackHole.x
@@ -1490,18 +1519,18 @@ assets:
                       }
                   });
                   await doTalk(sailor, "We're heading towards a black hole!");
-                  if (this.skipped) return;
+                  if (This.skipped) return;
 
                   // aliens!
                   
                   await doTalk(sailor, "Captain! Hostile aliens incoming!");
-                  if (this.skipped) return;
+                  if (This.skipped) return;
 
                   // let's go
                   await doTalk(captain, "Hm...");
                   await doTalk(captain, "Before I do anything, I need my hot chocolate!");
                   await doTalk(captain, "Call the janitor!");
-                  if (this.skipped) return;
+                  if (This.skipped) return;
                   
                   moveRoom("Room_Janitor");
               }
@@ -1511,6 +1540,7 @@ assets:
             lib: core
         uid: mfHt2TWd3dpDg3
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -2317,6 +2347,7 @@ assets:
         events: []
         uid: HF5hHmkzPTQNmb
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -2350,6 +2381,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 448
             'y': 312
             opacity: 1
@@ -2361,6 +2393,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 384
             'y': 384
             opacity: 1
@@ -2372,6 +2405,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 224
             'y': 224
             opacity: 1
@@ -2383,6 +2417,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 576
             'y': 640
             opacity: 1
@@ -2394,6 +2429,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 608
             'y': 640
             opacity: 1
@@ -2405,6 +2441,7 @@ assets:
             uid: fhddgJcNKrhtmk
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 704
             'y': 576
             opacity: 1
@@ -2416,6 +2453,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 768
             'y': 576
             opacity: 1
@@ -2427,6 +2465,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 832
             'y': 576
             opacity: 1
@@ -2438,6 +2477,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 419
             'y': 704
             opacity: 1
@@ -2449,6 +2489,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 340
             'y': 704
             opacity: 1
@@ -2460,6 +2501,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 256
             'y': 704
             opacity: 1
@@ -2471,6 +2513,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 492
             'y': 704
             opacity: 1
@@ -2482,6 +2525,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 576
             'y': 704
             opacity: 1
@@ -2493,6 +2537,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 640
             'y': 704
             opacity: 1
@@ -2504,6 +2549,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 512
             'y': 312
             opacity: 1
@@ -2515,6 +2561,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 896
             'y': 288
             opacity: 1
@@ -2526,6 +2573,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 704
             'y': 690
             opacity: 1
@@ -2537,6 +2585,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 128
             'y': 690
             opacity: 1
@@ -2548,6 +2597,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 5
             'y': 0
             opacity: 1
@@ -2559,6 +2609,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -80
             'y': 288
             opacity: 1
@@ -2570,6 +2621,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 24
             'y': 608
             opacity: 1
@@ -2581,6 +2633,7 @@ assets:
             uid: TQtRCB1Lb457JW
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 192
             'y': 0
             opacity: 1
@@ -2592,6 +2645,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 384
             'y': 0
             opacity: 1
@@ -2603,6 +2657,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 576
             'y': 0
             opacity: 1
@@ -2614,6 +2669,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 768
             'y': 0
             opacity: 1
@@ -2625,6 +2681,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1152
             'y': 0
             opacity: 1
@@ -2636,6 +2693,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 24
             'y': 208
             opacity: 1
@@ -2647,6 +2705,7 @@ assets:
             uid: TQtRCB1Lb457JW
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1040
             'y': 208
             opacity: 1
@@ -2658,6 +2717,7 @@ assets:
             uid: TQtRCB1Lb457JW
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 272
             'y': 224
             opacity: 1
@@ -2669,6 +2729,7 @@ assets:
             uid: 3BN2zrLb27ftrC
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 176
             'y': 512
             opacity: 1
@@ -2680,6 +2741,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 960
             'y': 0
             opacity: 1
@@ -2691,6 +2753,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1036
             'y': 613
             opacity: 1
@@ -2702,6 +2765,7 @@ assets:
             uid: TQtRCB1Lb457JW
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 15
             opacity: 1
@@ -2713,6 +2777,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 285
             opacity: 1
@@ -2724,6 +2789,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 285
             opacity: 1
@@ -2735,6 +2801,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 704
             'y': 312
             opacity: 1
@@ -2746,6 +2813,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 768
             'y': 312
             opacity: 1
@@ -2757,6 +2825,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 832
             'y': 312
             opacity: 1
@@ -2768,6 +2837,7 @@ assets:
             uid: BgCfnp8knKpm9J
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 704
             'y': 256
             opacity: 1
@@ -2779,6 +2849,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 768
             'y': 256
             opacity: 1
@@ -2790,6 +2861,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 832
             'y': 256
             opacity: 1
@@ -2801,6 +2873,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 832
             'y': 192
             opacity: 1
@@ -2812,6 +2885,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 768
             'y': 192
             opacity: 1
@@ -2823,6 +2897,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 704
             'y': 192
             opacity: 1
@@ -2834,6 +2909,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 448
             'y': 256
             opacity: 1
@@ -2845,6 +2921,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 512
             'y': 256
             opacity: 1
@@ -2856,6 +2933,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 576
             'y': 256
             opacity: 1
@@ -2867,6 +2945,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 576
             'y': 192
             opacity: 1
@@ -2878,6 +2957,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 512
             'y': 192
             opacity: 1
@@ -2889,6 +2969,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 448
             'y': 192
             opacity: 1
@@ -2900,6 +2981,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 640
             'y': 256
             opacity: 1
@@ -2911,6 +2993,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 640
             'y': 192
             opacity: 1
@@ -2922,6 +3005,7 @@ assets:
             uid: CzPkkntW1Thjwh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 632
             'y': 312
             opacity: 1
@@ -2933,6 +3017,7 @@ assets:
             uid: hz2P8B2MQzdknz
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 150
             opacity: 1
@@ -2944,6 +3029,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 150
             opacity: 1
@@ -2955,6 +3041,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 15
             opacity: 1
@@ -2966,6 +3053,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 420
             opacity: 1
@@ -2977,6 +3065,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1190
             'y': 555
             opacity: 1
@@ -2988,6 +3077,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 0
             opacity: 1
@@ -2999,6 +3089,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 420
             opacity: 1
@@ -3010,6 +3101,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -100
             'y': 555
             opacity: 1
@@ -3021,6 +3113,7 @@ assets:
             uid: W135h7PGBzcWLB
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 144
             'y': 656
             opacity: 1
@@ -3032,6 +3125,7 @@ assets:
             uid: dzFzhGJ9PJ9CHk
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 866
             'y': 64
             opacity: 1
@@ -3043,6 +3137,7 @@ assets:
             uid: dzFzhGJ9PJ9CHk
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -110
             'y': 64
             opacity: 1
@@ -3056,6 +3151,7 @@ assets:
             customProperties:
               newProperty1: ''
               newProperty2: ''
+            bindings: {}
           - x: -110
             'y': 464
             opacity: 1
@@ -3069,6 +3165,7 @@ assets:
             customProperties:
               newProperty1: ''
               newProperty2: ''
+            bindings: {}
           - x: 1216
             'y': 64
             opacity: 1
@@ -3081,6 +3178,7 @@ assets:
             exts: {}
             customProperties:
               newProperty3: ''
+            bindings: {}
           - x: 1221
             'y': 475
             opacity: 1
@@ -3092,6 +3190,7 @@ assets:
             uid: T5qkQrDTnNDf3D
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -110
             'y': 690
             opacity: 1
@@ -3103,6 +3202,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 928
             'y': 690
             opacity: 1
@@ -3114,6 +3214,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 96
             'y': 64
             opacity: 1
@@ -3125,6 +3226,7 @@ assets:
             uid: dzFzhGJ9PJ9CHk
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1528
             'y': -55
             opacity: 1
@@ -3136,6 +3238,7 @@ assets:
             uid: 5BPgf2T7gc2956
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -108
             'y': -55
             opacity: 1
@@ -3147,6 +3250,7 @@ assets:
             uid: 5BPgf2T7gc2956
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 849
             'y': 660
             opacity: 1
@@ -3158,6 +3262,7 @@ assets:
             uid: dzFzhGJ9PJ9CHk
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -75
             'y': 0
             opacity: 1
@@ -3169,6 +3274,7 @@ assets:
             uid: cqqdNgkBk88ckw
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: -75
             'y': 340
             opacity: 1
@@ -3180,6 +3286,7 @@ assets:
             uid: cqqdNgkBk88ckw
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1185
             'y': 0
             opacity: 1
@@ -3191,6 +3298,7 @@ assets:
             uid: cqqdNgkBk88ckw
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 1185
             'y': 340
             opacity: 1
@@ -3202,16 +3310,19 @@ assets:
             uid: cqqdNgkBk88ckw
             exts: {}
             customProperties: {}
+            bindings: {}
         tiles:
           - depth: 1
             tiles: []
             extends: {}
             hidden: false
+            cache: true
         extends: {}
-        lastmod: 1705524790322
+        lastmod: 1719680195290
         events: []
         uid: cC87929jh5jjrR
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -4019,6 +4130,7 @@ assets:
         events: []
         uid: 9cKRrM3gGJRwN5
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -4925,6 +5037,7 @@ assets:
         events: []
         uid: qpgkg3gT2L92Kr
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -4958,12 +5071,14 @@ assets:
             uid: PkJPtbzttW7h7c
             exts: {}
             customProperties: {}
+            bindings: {}
         tiles: []
         extends: {}
-        lastmod: 1702502083123
+        lastmod: 1719683337076
         events: []
         uid: qrJNKwgLN74QWT
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -4997,6 +5112,7 @@ assets:
             uid: KPQQ9RdM3P7bRh
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 780.43428571
             'y': 140.06857143
             opacity: 1
@@ -5008,6 +5124,7 @@ assets:
             uid: zTf3hWP3nKGMhm
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 448
             'y': 256
             opacity: 1
@@ -5019,6 +5136,7 @@ assets:
             uid: jDj4719rL4Jcjd
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 320
             'y': 192
             opacity: 1
@@ -5030,9 +5148,10 @@ assets:
             uid: 5qNm5Jn2njFgMr
             exts: {}
             customProperties: {}
+            bindings: {}
         tiles: []
         extends: {}
-        lastmod: 1704573730387
+        lastmod: 1719681000112
         events:
           - eventKey: OnStep
             code: ''
@@ -5114,7 +5233,7 @@ assets:
                   let letters = canister.symbol.toUpperCase();
                   if ( ! this.codeOff.startsWith(letters)) {
                       showMessage("No - "+canister.symbol+" does not fit "+this.codeOff);
-                      sounds.spawn("Sound_Nope",{volume:0.3});
+                      sounds.play("Sound_Nope",{volume:0.3});
                       return;
                   }
                   this.codeOn += letters;
@@ -5129,7 +5248,7 @@ assets:
                       mission.done = true;
                       check(mission.key, mission);
                       unlocked[mission.key] = true;
-                      sounds.spawn("Sound_Chug",{volume:0.5});
+                      sounds.play("Sound_Chug",{volume:0.5});
                       timer.add(1000).then(() => {
                           // remove??
                           rooms.remove(UI.modal);
@@ -5150,6 +5269,7 @@ assets:
             lib: core
         uid: PrkJ14tzNWt6L8
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -5195,6 +5315,7 @@ assets:
             exts: {}
             customProperties:
               label: Start New Game
+            bindings: {}
           - x: 128
             'y': 128
             opacity: 1
@@ -5206,6 +5327,7 @@ assets:
             uid: gc76jrHjcwbGgr
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 896
             'y': 192
             opacity: 1
@@ -5218,9 +5340,10 @@ assets:
             exts: {}
             customProperties:
               label: Options
+            bindings: {}
         tiles: []
         extends: {}
-        lastmod: 1704403968021
+        lastmod: 1719680188294
         events:
           - eventKey: OnRoomStart
             code: |+
@@ -5250,6 +5373,7 @@ assets:
             lib: core
         uid: MfWfD58G3Q514D
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -5364,6 +5488,7 @@ assets:
             lib: core
         uid: 4mNdh3PmM4gjBC
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -5408,6 +5533,7 @@ assets:
             uid: CfLHnnjb3G8L59
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 583.06779661
             'y': 666.03930131
             opacity: 1
@@ -5419,6 +5545,7 @@ assets:
             uid: 4hNm69L2mbHtCK
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 165
             'y': 685
             opacity: 0
@@ -5430,6 +5557,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 355
             'y': 685
             opacity: 0
@@ -5441,6 +5569,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 545
             'y': 685
             opacity: 0
@@ -5452,6 +5581,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 760.93887857
             'y': 673.49205041
             opacity: 0
@@ -5463,6 +5593,7 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
           - x: 755.93887857
             'y': 478.49205041
             opacity: 0
@@ -5474,9 +5605,46 @@ assets:
             uid: 1cRbbTTRzCHgjn
             exts: {}
             customProperties: {}
+            bindings: {}
+          - x: 0
+            'y': 720
+            opacity: 0.33
+            tint: 16777215
+            scale:
+              x: 5.36649215
+              'y': 1.85714286
+            rotation: 0
+            uid: 1cRbbTTRzCHgjn
+            exts: {}
+            customProperties: {}
+            bindings: {}
+          - x: 1025
+            'y': 0
+            opacity: 0.33
+            tint: 16777215
+            scale:
+              x: 0.39267016
+              'y': 22.28571429
+            rotation: 0
+            uid: 1cRbbTTRzCHgjn
+            exts: {}
+            customProperties: {}
+            bindings: {}
+          - x: 40
+            'y': 0
+            opacity: 1
+            tint: 16777215
+            scale:
+              x: 0.39267016
+              'y': 22.28571429
+            rotation: 0
+            uid: 1cRbbTTRzCHgjn
+            exts: {}
+            customProperties: {}
+            bindings: {}
         tiles: []
         extends: {}
-        lastmod: 1704219716147
+        lastmod: 1719681730854
         events:
           - eventKey: OnRoomStart
             code: |-
@@ -5490,6 +5658,7 @@ assets:
             lib: core
         uid: tRc37K4N3LNGmm
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -5592,6 +5761,7 @@ assets:
             lib: core
         uid: j4T47BCdp7pt6C
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -5942,6 +6112,7 @@ assets:
             lib: core
         uid: ftHN9qQ5QQRjfk
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -6542,6 +6713,7 @@ assets:
             lib: core
         uid: FT4BHQQ5N75Fb8
         behaviors: []
+        extendTypes: ''
       - type: room
         oncreate: ''
         onstep: ''
@@ -6626,10 +6798,10 @@ assets:
             bindings: {}
         tiles: []
         extends: {}
-        lastmod: 1709247950178
+        lastmod: 1719683336994
         events:
           - eventKey: OnRoomStart
-            code: "\n\nthis.puzzleType = \"flow\";\nthis.elementSymbol = roomOptions[this.name].symbol;\ncheck(this.elementSymbol);\nthis.element = info4symbol[this.elementSymbol]\n\n// get harder\nthis.puzzleSize = Math.min(Math.max(10, this.element.atomic_number / 5), 5);\n\nconsole.log(\"room\", this, \"roomOptions\", JSON.stringify(roomOptions), \"element\", this.element);\n\nrooms.append('Room_UI');\n\nconst BLANK_TEXTURE = \"pipe-empty\";\nconst EW_TEXTURE = \"pipe-bit-1\";\nconst NW_TEXTURE = \"pipe-corner-NW\";\nconst SW_TEXTURE = \"pipe-corner-SW\";\n\n// container\nthis.sortableChildren = true;\nlet pContainer = getTemplates(this,\"PlumbingContainer\")[0];\npContainer.zIndex = 100;\n// NB: x/y adjustment numbers found by random tweaking :'(\nlet sqWidth = Math.floor((pContainer.width - 150) / this.puzzleSize);\nlet offsetX = (pContainer.width - sqWidth*this.puzzleSize)/2 + 15; \nlet offsetY = 20 + 32; \n\n// Text\nlet textBlock = getTemplates(this, \"TextBlock\")[0];\nlet info = info4symbol[this.elementSymbol];\naddText(textBlock, info.atomic_number+\": \"+info.name+\" (\"+info.symbol+\")\\n\"\n    +\"At room temperature: \"+info.standard_conditions_state+\"\\n\"\n    +\"Normal appearance: \"+info.appearance+\"\\n\"\n    +info.interesting_fact\n    // +JSON.stringify(info)\n    , 10, 10, {wordWrap:true, wordWrapWidth: textBlock.width - 20});\n\n// TODO seeds\n\n/**\n * @returns {Pipe[]}\n */\nfunction makePipes({w=8}) {\n    let pipes = [];\n    for(let i=0; i<w; i++) {\n        let pipe = new Pipe();\n        pipes.push(pipe);\n        pipe.col = Object.keys(colour)[i];\n        for(let j=0; j<w; j++) {\t\t\t\t\n            pipe.xys.push([i, j]);\n        }\n    }\n\n    // mutate - move a pair of pipe ends\n    for(let i=0; i<1000000; i++) {\n        let pipe1 = getRandomMember(pipes);\n        let pipe2 = getRandomMember(pipes);\n        if (pipe1==pipe2) continue;\n        let ai = getRandomChoice(0.5)? 0 : pipe1.xys.length - 1;\n        let bi = getRandomChoice(0.5)? 0 : pipe2.xys.length - 1;\n        let a0 = pipe1.xys[ai];\n        let b0 = pipe2.xys[bi];\n        if (isTouching(a0, b0)) {\n            // move one end\n            if (getRandomChoice(0.5)) {\n                movePipe(pipe1,ai,pipe2,bi);\n            } else {\n                movePipe(pipe2,bi,pipe1,ai);\n            }\n        }\n    }\t\n    return pipes;\t\n} // ./ makePipes\n\nfunction movePipe(pipe1,  ai,  pipe2,  bi) {\n    if (pipe1.xys.length < 4) return;\n    let s = pipe1.xys[ai];\n    // avoid looping back:\n    if (isLoopBack(s, pipe2, pipe2.xys[bi])) {\n        return;\n    } else {\n        pipe1.xys = pipe1.xys.filter(xy => xy !== s);\n        if (bi==0) pipe2.xys.splice(bi, 0, s);\n        else pipe2.xys.push(s);\n    }\n}\n\nfunction isLoopBack(s, pipe2, b0) {\n    for (let i = 0; i < pipe2.xys.length; i++) {\n        let b = pipe2.xys[i];\n        if (b===b0) continue;\n        if (isTouching(s,b)) return true;\n    }\n    return false;\n}\n\nthis.pipes = makePipes({w:this.puzzleSize});\n\nconsole.log(this.pipes);\n\n// render\nthis.grid = [];\nfor(let i=0; i<this.puzzleSize; i++) this.grid.push([]);\nthis.pipes.forEach(pipe => {\n    let start = pipe.xys[0];\n    let end = pipe.xys[pipe.xys.length-1];\n    // pipe.xys.forEach(xy => {\n    [start, end].forEach(xy => {\n        let pb = new PipeBit();\n        pb.col = pipe.col;\n        pb.isEnd = true;\n        this.grid[xy[0]][xy[1]] = pb;\n    });\n});\n// console.log(\"grid\", this.grid);\n\n// draw grid\nlet pGridLines = new PIXI.Graphics();\npGridLines.lineStyle(3, 0xcccccc, 0.5, 0.5, true);\nlet h = 38; // adjust for half-brick centering in tile bits\nlet endX = offsetX + this.puzzleSize * sqWidth - h;\nlet endY = offsetY + this.puzzleSize * sqWidth - h;\nfor(let col=0; col < this.grid.length + 1; col++) {\n    pGridLines.moveTo(offsetX-35, offsetY - 38 + sqWidth*col);\n    pGridLines.lineTo(endX, offsetY - 38 + sqWidth*col);\n}\nfor(let row=0; row < this.grid.length + 1; row++) {\n    pGridLines.moveTo(offsetX-38 +sqWidth*row, offsetY-38);\n    pGridLines.lineTo(offsetX-38 +sqWidth*row, endY);\n}\npContainer.addChild(pGridLines);\n\n// grid to tile-grid\nfor(let i=0; i<this.grid.length; i++) {\n    for(let j=0; j<this.grid.length; j++) { // NB: assume square\n        // console.log(\"grid i j\", i, j, this.grid[i][j], this.grid[i][j]?.col);\n        let copy = templates.copy(\"empty-tile\");\n        copy.zIndex = 100;\n        copy.pipeColor = this.grid[i][j]?.col;\n        // let obj = new PIXI.Graphics();\n        copy.gridx = j;\n        copy.gridy = i;\n        copy.x = offsetX + sqWidth*j;\n        copy.y = offsetY + sqWidth*i;\n\n        if (copy.pipeColor) {\n            copy.isEnd = true;\n            copy.tex = \"pipe-end-block\";\n            const col = colour[copy.pipeColor];\n            copy.tint = col;\n            // obj.beginFill(colour[copy.pipeColor]);\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);            \n        } else {        \n            copy.tex = BLANK_TEXTURE; //\"pipe-bit-1\";\n        }        \n        copy.width  = sqWidth;\n        copy.height = sqWidth;\n        // copy.height = sqWidth;\n\n        // copy.addChild(obj);\n        pContainer.addChild(copy);\n    }\n}\n\nthis.pipeColourMarker = getTemplates(this, \"PipeColorMarker\")[0];\ncheck(this.pipeColourMarker);\n\nfunction setColor(color, room) {\n    check(room, \"no room\",color);\n    // select\n    room.selectedColor = color;\n    room.downColor = color;\n    console.log(\"col\",color);\n    const col = colour[color] || colour.white; // white tint = no tint\n    room.pipeColourMarker.tint = col;\n}\nthis.setPipeColor = setColor;\n\nthis.onTileClick = (This) => {\n    console.log(\"click\",This);\n    let room = This.getRoom();\n    if (This.isEnd) {\n        setColor(This.pipeColor, room);\n    } else {\n        room.doFillTile(This, room.selectedColor);\n    }\n};\n\n\nthis.doFillTile = function(This, color) {\n    console.log(\"bar\");\n    check(This);\n    let room = This.getRoom();\n    check(room, This);\n    if (This.isEnd) {\n        if (color===This.pipeColor) {\n            setColor(null, room);\n        } else {\n            setColor(This.pipeColor, room);\n        }\n        return;\n    }\n    This.tex = EW_TEXTURE;\n    This.pipeColor = color;\n    const col = colour[This.pipeColor];\n    This.tint = col; \n    let pb = new PipeBit();\n    pb.col = This.pipeColor;\n    pb.pTile = This;\n    room.grid[This.gridy][This.gridx] = pb;\n    // adjust graphics\n    setPipeTexture(This, room);\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid); // TODO\n    gn.forEach(nxy => {\n        let pTile = getGridEntry(room.grid, nxy)?.pTile;\n        if (pTile) setPipeTexture(pTile, room);\n    });\n    // Win?\n    let win = checkWin(room.grid, room.pipes);\n    if (win) {\n        doWin(room);\n    }\n};\n\n\nfunction setPipeTexture(This, room) {\n    console.log(\"setPipeTexture\",This);\n    check( ! This.isEnd);\n    let col = This.pipeColor;\n    if ( ! col) {\n        This.tex = BLANK_TEXTURE;\n        return;\n    }\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid);\n    console.log(\"setPipeTexture xy\",xy,\"gn\",gn);\n    let sameColor = gn.filter(nxy => {\n        // console.log(\"setPipeTexture xy\",xy,\"gn\",gn,\"grid row\",room.grid[nxy[1]]);\n        let row = room.grid[nxy[1]];\n        if ( ! row) {\n            // console.warn(\"no row in grid\",nxy,room.grid);\n            return false;\n        }\n        let npb = row[nxy[0]];\n        return npb?.col === col;\n    });\n    console.log(\"TODO which pipe texture? sameColor\",sameColor,\"xy\", xy, This, room)\n    let n = contains([xy[0],xy[1]-1], sameColor);\n    let s = contains([xy[0],xy[1]+1], sameColor);\n    let e = contains([xy[0]+1,xy[1]], sameColor);\n    let w = contains([xy[0]-1,xy[1]], sameColor);\n    console.log(\"what corner?\",\"n\",n,\"e\",e,\"s\",s,\"w\",w,\"xy\",xy);\n\n    if (n || s) {\n        if ( ! e && ! w) {\n            This.tex = EW_TEXTURE;\n            This.rotation = Math.PI / 2;\n            return;\n        }\n    } else if (e || w) {\n        This.tex = EW_TEXTURE;\n        This.rotation = 0; // reset\n        return;\n    } else {\n        This.tex = BLANK_TEXTURE;\n    }\n    // corner\n    This.rotation = 0; // reset\n    if (n && w) {\n        This.tex = NW_TEXTURE; \n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (s && w) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (n && e) {\n        This.tex = NW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    if (s && e) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    // error\n    This.tex = EW_TEXTURE;\n    console.error(\"what corner?\",n,e,s,w,xy);\n}\n\nfunction doWin(room) {\n    sounds.play(\"Success\");\n    room.win = true;\n    let x = room.pipeColourMarker.x;\n    let y = room.pipeColourMarker.y;\n    emitters.append(room.pipeColourMarker, \"SparksFX\");\n    doUnlock(room.elementSymbol);\n    addCanister(room.elementSymbol);\n    // close\n    sounds.play(\"Sound_Squeaky_Open\", {volume:0.5, complete: () => {\n        moveRoom(\"Room_Platformer\");\n    }});\n}\n\nfunction checkWin(grid, pipes) {\n    console.log(\"TODO checkWin\", grid, pipes);\n    for(let i=0; i<pipes.length; i++) {\n        if ( ! checkWin2_onePipe(grid, pipes[i])) return false;\n    }\n    return true;\n}\n\n/**\n * @param {PipeBit[][]} grid\n */\nfunction checkWin2_onePipe(grid, pipe) {\n    console.log(\"pipe\", pipe.col, pipe,\"grid\",grid);\n    let startXY = pipe.xys[0];\n    let endXY = pipe.xys[pipe.xys.length-1];\n    let path = [startXY];\n    let steps = 0;\n    while(steps < 20) {\n        steps++;\n        let tip = path[path.length-1];\n        let gn = getGridNeighbours(tip, grid);\n        console.log(\"path\", path, \"gn\",gn,\"tip\",tip);\n        let nextBits = gn.filter(xy => {\n            let g0 = grid[xy[0]];\n            if ( ! g0) return false;\n            let pb = g0[xy[1]];\n            console.log(\"nextBits check xy\", xy, \"pb\", pb, path);\n            return pb && pb.col === pipe.col && ! contains(xy, path);\n        }) ;  \n        console.log(path, \"nextBits\",nextBits, grid, pipe);\n        if ( ! nextBits.length) {\n            console.log(\"FAIL for \", pipe.col, path);\n            return false;\n        }\n        let nextBit = nextBits[0];\n        if (eq(nextBit, endXY)) {\n            console.log(\"WIN for \", pipe.col, path);\n            return true;\n        }\n        console.log(\"LOOP \", pipe.col, nextBit, \"path\",path,\"endXY\", endXY);\n        path.push(nextBit);\n    }\n    // let next = grid.\n    console.log(\"max steps for \", pipe.col, path);\n    return false; // TODO\n}\n\n/**\n * @returns {Array[]} [[x,y], ...]\n */\nfunction getGridNeighbours(xy, grid) {\n    let neighbours = [[1,0],[-1,0],[0,1],[0,-1]].map(dxdy => [xy[0]+dxdy[0], xy[1]+dxdy[1]]);\n    let filtered = neighbours.filter(cell => cell[0] > 0 && cell[1] > 0 && cell[0] < grid.length && cell[1] < grid[0].length);\n    console.log(\"neighbours\",xy,grid,\"filtered\", filtered);\n    return neighbours;\n}\n\nthis.sortChildren();"
+            code: "\n\nthis.puzzleType = \"flow\";\nthis.elementSymbol = roomOptions[this.name].symbol;\ncheck(this.elementSymbol);\nthis.element = info4symbol[this.elementSymbol]\n\n// get harder\nthis.puzzleSize = Math.min(Math.max(10, this.element.atomic_number / 5), 5);\n\nconsole.log(\"room\", this, \"roomOptions\", JSON.stringify(roomOptions), \"element\", this.element);\n\nrooms.append('Room_UI');\n\nconst BLANK_TEXTURE = \"pipe-empty\";\nconst EW_TEXTURE = \"pipe-bit-1\";\nconst NW_TEXTURE = \"pipe-corner-NW\";\nconst SW_TEXTURE = \"pipe-corner-SW\";\n\n// container\nthis.sortableChildren = true;\nlet pContainer = getTemplates(this,\"PlumbingContainer\")[0];\npContainer.zIndex = 100;\n// NB: x/y adjustment numbers found by random tweaking :'(\nlet sqWidth = Math.floor((pContainer.width - 150) / this.puzzleSize);\nlet offsetX = (pContainer.width - sqWidth*this.puzzleSize)/2 + 15; \nlet offsetY = 20 + 32; \n\n// Text\nlet textBlock = getTemplates(this, \"TextBlock\")[0];\nlet info = info4symbol[this.elementSymbol];\naddText(textBlock, info.atomic_number+\": \"+info.name+\" (\"+info.symbol+\")\\n\"\n    +\"At room temperature: \"+info.standard_conditions_state+\"\\n\"\n    +\"Normal appearance: \"+info.appearance+\"\\n\"\n    +info.interesting_fact\n    // +JSON.stringify(info)\n    , 10, 10, {wordWrap:true, wordWrapWidth: textBlock.width - 20});\n\n// TODO seeds\n\n/**\n * @returns {Pipe[]}\n */\nfunction makePipes({w=8}) {\n    let pipes = [];\n    for(let i=0; i<w; i++) {\n        let pipe = new Pipe();\n        pipes.push(pipe);\n        pipe.col = Object.keys(colour)[i];\n        for(let j=0; j<w; j++) {\t\t\t\t\n            pipe.xys.push([i, j]);\n        }\n    }\n\n    // mutate - move a pair of pipe ends\n    for(let i=0; i<1000000; i++) {\n        let pipe1 = getRandomMember(pipes);\n        let pipe2 = getRandomMember(pipes);\n        if (pipe1==pipe2) continue;\n        let ai = getRandomChoice(0.5)? 0 : pipe1.xys.length - 1;\n        let bi = getRandomChoice(0.5)? 0 : pipe2.xys.length - 1;\n        let a0 = pipe1.xys[ai];\n        let b0 = pipe2.xys[bi];\n        if (isTouching(a0, b0)) {\n            // move one end\n            if (getRandomChoice(0.5)) {\n                movePipe(pipe1,ai,pipe2,bi);\n            } else {\n                movePipe(pipe2,bi,pipe1,ai);\n            }\n        }\n    }\t\n    return pipes;\t\n} // ./ makePipes\n\nfunction movePipe(pipe1,  ai,  pipe2,  bi) {\n    if (pipe1.xys.length < 4) return;\n    let s = pipe1.xys[ai];\n    // avoid looping back:\n    if (isLoopBack(s, pipe2, pipe2.xys[bi])) {\n        return;\n    } else {\n        pipe1.xys = pipe1.xys.filter(xy => xy !== s);\n        if (bi==0) pipe2.xys.splice(bi, 0, s);\n        else pipe2.xys.push(s);\n    }\n}\n\nfunction isLoopBack(s, pipe2, b0) {\n    for (let i = 0; i < pipe2.xys.length; i++) {\n        let b = pipe2.xys[i];\n        if (b===b0) continue;\n        if (isTouching(s,b)) return true;\n    }\n    return false;\n}\n\nthis.pipes = makePipes({w:this.puzzleSize});\n\nconsole.log(this.pipes);\n\n// render\nthis.grid = [];\nfor(let i=0; i<this.puzzleSize; i++) this.grid.push([]);\nthis.pipes.forEach(pipe => {\n    let start = pipe.xys[0];\n    let end = pipe.xys[pipe.xys.length-1];\n    // pipe.xys.forEach(xy => {\n    [start, end].forEach(xy => {\n        let pb = new PipeBit();\n        pb.col = pipe.col;\n        pb.isEnd = true;\n        this.grid[xy[0]][xy[1]] = pb;\n    });\n});\n// console.log(\"grid\", this.grid);\n\n// draw grid\nlet pGridLines = new PIXI.Graphics();\npGridLines.lineStyle(3, 0xcccccc, 0.5, 0.5, true);\nlet h = 38; // adjust for half-brick centering in tile bits\nlet endX = offsetX + this.puzzleSize * sqWidth - h;\nlet endY = offsetY + this.puzzleSize * sqWidth - h;\nfor(let col=0; col < this.grid.length + 1; col++) {\n    pGridLines.moveTo(offsetX-35, offsetY - 38 + sqWidth*col);\n    pGridLines.lineTo(endX, offsetY - 38 + sqWidth*col);\n}\nfor(let row=0; row < this.grid.length + 1; row++) {\n    pGridLines.moveTo(offsetX-38 +sqWidth*row, offsetY-38);\n    pGridLines.lineTo(offsetX-38 +sqWidth*row, endY);\n}\npContainer.addChild(pGridLines);\n\n// grid to tile-grid\nfor(let i=0; i<this.grid.length; i++) {\n    for(let j=0; j<this.grid.length; j++) { // NB: assume square\n        // console.log(\"grid i j\", i, j, this.grid[i][j], this.grid[i][j]?.col);\n        let copy = templates.copy(\"empty-tile\");\n        copy.zIndex = 100;\n        copy.pipeColor = this.grid[i][j]?.col;\n        // let obj = new PIXI.Graphics();\n        copy.gridx = j;\n        copy.gridy = i;\n        copy.x = offsetX + sqWidth*j;\n        copy.y = offsetY + sqWidth*i;\n\n        if (copy.pipeColor) {\n            copy.isEnd = true;\n            copy.tex = \"pipe-end-block\";\n            const col = colour[copy.pipeColor];\n            copy.tint = col;\n            // obj.beginFill(colour[copy.pipeColor]);\n            // obj.drawRect(1, 1, sqWidth-2, sqWidth-2);            \n        } else {        \n            copy.tex = BLANK_TEXTURE; //\"pipe-bit-1\";\n        }        \n        copy.width  = sqWidth;\n        copy.height = sqWidth;\n        // copy.height = sqWidth;\n\n        // copy.addChild(obj);\n        pContainer.addChild(copy);\n    }\n}\n\nthis.pipeColourMarker = getTemplates(this, \"PipeColorMarker\")[0];\ncheck(this.pipeColourMarker);\n\nfunction setColor(color, room) {\n    check(room, \"no room\",color);\n    // select\n    room.selectedColor = color;\n    room.downColor = color;\n    console.log(\"col\",color);\n    const col = colour[color] || colour.white; // white tint = no tint\n    room.pipeColourMarker.tint = col;\n}\nthis.setPipeColor = setColor;\n\nthis.onTileClick = (This) => {\n    console.log(\"click\",This);\n    let room = This.getRoom();\n    if (This.isEnd) {\n        setColor(This.pipeColor, room);\n    } else {\n        room.doFillTile(This, room.selectedColor);\n    }\n};\n\n\nthis.doFillTile = function(This, color) {\n    console.log(\"bar\");\n    check(This);\n    let room = This.getRoom();\n    check(room, This);\n    if (This.isEnd) {\n        if (color===This.pipeColor) {\n            setColor(null, room);\n        } else {\n            setColor(This.pipeColor, room);\n        }\n        return;\n    }\n    This.tex = EW_TEXTURE;\n    This.pipeColor = color;\n    const col = colour[This.pipeColor];\n    This.tint = col; \n    let pb = new PipeBit();\n    pb.col = This.pipeColor;\n    pb.pTile = This;\n    room.grid[This.gridy][This.gridx] = pb;\n    // adjust graphics\n    setPipeTexture(This, room);\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid); // TODO\n    gn.forEach(nxy => {\n        let pTile = getGridEntry(room.grid, nxy)?.pTile;\n        if (pTile) setPipeTexture(pTile, room);\n    });\n    // Win?\n    let win = checkWin(room.grid, room.pipes);\n    if (win) {\n        doWin(room);\n    }\n};\n\n\nfunction setPipeTexture(This, room) {\n    console.log(\"setPipeTexture\",This);\n    check( ! This.isEnd);\n    let col = This.pipeColor;\n    if ( ! col) {\n        This.tex = BLANK_TEXTURE;\n        return;\n    }\n    let xy = [This.gridx,This.gridy];\n    let gn = getGridNeighbours(xy, room.grid);\n    console.log(\"setPipeTexture xy\",xy,\"gn\",gn);\n    let sameColor = gn.filter(nxy => {\n        // console.log(\"setPipeTexture xy\",xy,\"gn\",gn,\"grid row\",room.grid[nxy[1]]);\n        let row = room.grid[nxy[1]];\n        if ( ! row) {\n            // console.warn(\"no row in grid\",nxy,room.grid);\n            return false;\n        }\n        let npb = row[nxy[0]];\n        return npb?.col === col;\n    });\n    console.log(\"TODO which pipe texture? sameColor\",sameColor,\"xy\", xy, This, room)\n    let n = contains([xy[0],xy[1]-1], sameColor);\n    let s = contains([xy[0],xy[1]+1], sameColor);\n    let e = contains([xy[0]+1,xy[1]], sameColor);\n    let w = contains([xy[0]-1,xy[1]], sameColor);\n    console.log(\"what corner?\",\"n\",n,\"e\",e,\"s\",s,\"w\",w,\"xy\",xy);\n\n    if (n || s) {\n        if ( ! e && ! w) {\n            This.tex = EW_TEXTURE;\n            This.rotation = Math.PI / 2;\n            return;\n        }\n    } else if (e || w) {\n        This.tex = EW_TEXTURE;\n        This.rotation = 0; // reset\n        return;\n    } else {\n        This.tex = BLANK_TEXTURE;\n    }\n    // corner\n    This.rotation = 0; // reset\n    if (n && w) {\n        This.tex = NW_TEXTURE; \n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (s && w) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        return;\n    }\n    if (n && e) {\n        This.tex = NW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    if (s && e) {\n        This.tex = SW_TEXTURE;\n        This.scale.x = - Math.abs(This.scale.x);\n        This.scale.y = Math.abs(This.scale.y);\n        This.width = sqWidth;\n        This.height = sqWidth;\n        return;\n    }\n    // error\n    This.tex = EW_TEXTURE;\n    console.error(\"what corner?\",n,e,s,w,xy);\n}\n\nfunction doWin(room) {\n    sounds.play(\"ChaChing\");\n    room.win = true;\n    let x = room.pipeColourMarker.x;\n    let y = room.pipeColourMarker.y;\n    emitters.append(room.pipeColourMarker, \"SparksFX\");\n    doUnlock(room.elementSymbol);\n    addCanister(room.elementSymbol);\n    // close\n    sounds.play(\"Sound_Squeaky_Open\", {volume:0.5, complete: () => {\n        moveRoom(\"Room_Platformer\");\n    }});\n}\n\nfunction checkWin(grid, pipes) {\n    console.log(\"TODO checkWin\", grid, pipes);\n    for(let i=0; i<pipes.length; i++) {\n        if ( ! checkWin2_onePipe(grid, pipes[i])) return false;\n    }\n    return true;\n}\n\n/**\n * @param {PipeBit[][]} grid\n */\nfunction checkWin2_onePipe(grid, pipe) {\n    console.log(\"pipe\", pipe.col, pipe,\"grid\",grid);\n    let startXY = pipe.xys[0];\n    let endXY = pipe.xys[pipe.xys.length-1];\n    let path = [startXY];\n    let steps = 0;\n    while(steps < 20) {\n        steps++;\n        let tip = path[path.length-1];\n        let gn = getGridNeighbours(tip, grid);\n        console.log(\"path\", path, \"gn\",gn,\"tip\",tip);\n        let nextBits = gn.filter(xy => {\n            let g0 = grid[xy[0]];\n            if ( ! g0) return false;\n            let pb = g0[xy[1]];\n            console.log(\"nextBits check xy\", xy, \"pb\", pb, path);\n            return pb && pb.col === pipe.col && ! contains(xy, path);\n        }) ;  \n        console.log(path, \"nextBits\",nextBits, grid, pipe);\n        if ( ! nextBits.length) {\n            console.log(\"FAIL for \", pipe.col, path);\n            return false;\n        }\n        let nextBit = nextBits[0];\n        if (eq(nextBit, endXY)) {\n            console.log(\"WIN for \", pipe.col, path);\n            return true;\n        }\n        console.log(\"LOOP \", pipe.col, nextBit, \"path\",path,\"endXY\", endXY);\n        path.push(nextBit);\n    }\n    // let next = grid.\n    console.log(\"max steps for \", pipe.col, path);\n    return false; // TODO\n}\n\n/**\n * @returns {Array[]} [[x,y], ...]\n */\nfunction getGridNeighbours(xy, grid) {\n    let neighbours = [[1,0],[-1,0],[0,1],[0,-1]].map(dxdy => [xy[0]+dxdy[0], xy[1]+dxdy[1]]);\n    let filtered = neighbours.filter(cell => cell[0] > 0 && cell[1] > 0 && cell[0] < grid.length && cell[1] < grid[0].length);\n    console.log(\"neighbours\",xy,grid,\"filtered\", filtered);\n    return neighbours;\n}\n\nthis.sortChildren();"
             arguments: {}
             lib: core
           - eventKey: OnStep
@@ -6639,6 +6811,7 @@ assets:
             lib: core
         uid: pJpHHCcNcbbFP3
         behaviors: []
+        extendTypes: ''
   - type: folder
     uid: Qcz9q2HKFkbdcH
     colorClass: act
@@ -6671,6 +6844,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: asteroid
         depth: 0
@@ -6695,6 +6869,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: atom_score
         depth: 0
@@ -6740,6 +6915,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: black
         depth: 0
@@ -6760,6 +6936,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: black-hole
         depth: 0
@@ -6786,6 +6963,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: bridge
         depth: 0
@@ -6800,10 +6978,10 @@ assets:
             code: this.move();
             arguments: {}
         extends: {}
-        lastmod: 1709314444446
+        lastmod: 1709315225448
         uid: bc9twq1FdGDzKN
         behaviors: []
-        baseClass: NineSlicePlane
+        baseClass: AnimatedSprite
         nineSliceSettings:
           top: 16
           left: 16
@@ -6811,6 +6989,7 @@ assets:
           right: 16
           autoUpdate: false
         style: -1
+        extendTypes: ''
       - type: template
         name: Block
         depth: 0
@@ -6822,7 +7001,7 @@ assets:
         events: []
         extends:
           cgroup: Solid
-        lastmod: 1704206202040
+        lastmod: 1719681884029
         uid: BgCfnp8knKpm9J
         behaviors: []
         baseClass: AnimatedSprite
@@ -6832,6 +7011,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: cat-1
         depth: 0
@@ -6841,85 +7021,6 @@ assets:
         animationFPS: 30
         visible: true
         events:
-          - eventKey: collisionTemplate
-            code: |
-
-              // if ( ! this.meow) {
-              //     this.meow = true;
-              //     sounds.spawn("Sound_Cat", {volume:0.5});
-              // }
-
-              // if (this.pTalkToMe) this.pTalkToMe.visible = false;
-
-              // doTalk(this, msg);
-            arguments:
-              template: CfLHnnjb3G8L59
-            lib: place
-          - eventKey: OnStep
-            code: >-
-
-              // if (this.talking || this.pSpeechBubble) { // bug - this.talking
-              isnt a reliable marker??
-
-              //     if (this.pTalkToMe) {
-
-              //         this.pTalkToMe.visible = false;
-
-              //         this.pTalkToMe.alpha = 0;
-
-              //     }
-
-              // }
-
-
-              // if (this.talking) {
-
-              //     let chimp = getPlayer();
-
-              //     if (chimp && ! place.collide(this, chimp)) {
-
-              //         console.log("Stop talking?", this.talking);
-
-              //         if (this.talking.control) {
-
-              //             this.talking.control.stop = true;
-
-              //             this.talking = null;
-
-              //         }
-
-              //     }
-
-              //     return;
-
-              // } else if ( ! this.pSpeechBubble) {
-
-              //     let msg = chat4symbol[rooms.current.element?.symbol];
-
-              //     if (msg && msg.lines.find(line => ! line.done)) {
-
-              //         if ( ! this.pTalkToMe) {
-
-              //             this.pTalkToMe = templates.copy("speech-bubble",
-              -5, -this.height -5);
-
-              //             this.addChild(this.pTalkToMe);
-
-              //             this.pTalkToMe.scale.x = 0.2;
-
-              //             this.pTalkToMe.scale.y = 0.2;            
-
-              //         }
-
-              //         this.pTalkToMe.visible = true;
-
-              //         this.pTalkToMe.alpha = 0.75;
-
-              //     }
-
-              // }
-            arguments: {}
-            lib: core
           - eventKey: OnCreate
             code: |
 
@@ -6928,12 +7029,12 @@ assets:
                   msg = new Chat("Meow. You're in the "+rooms.current.element?.name+" room.");
               }
               this.chat = msg;
-              this.chat.sound = "Sound_Cat";
+              this.chat.sound = "Meow";
             arguments: {}
             lib: core
         extends:
           cgroup: interact
-        lastmod: 1709117249401
+        lastmod: 1719680421587
         uid: 3BN2zrLb27ftrC
         behaviors: []
         baseClass: AnimatedSprite
@@ -6943,6 +7044,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: captain
         depth: 0
@@ -6967,6 +7069,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: chimp
         depth: 0
@@ -7000,7 +7103,9 @@ assets:
 
               function occupied(This, x, y) {
                   check(x);
-                  return place.occupied(This, x, y, "Solid");
+                  let result = place.occupied(This, x, y, "Solid");
+                  if (result) console.log("occupied", This, x, y, "result", result);
+                  return result;
               }
 
 
@@ -7099,7 +7204,7 @@ assets:
               if ( ! this.collisionCheck) {
                   this.y = this.y + this.dy;
                   this.x = this.x + this.dx;
-                  // console.log("no check");
+                  console.log("no check");
                   return;
               }
 
@@ -7156,7 +7261,7 @@ assets:
               // }
 
               if (hit.x) {
-                  // console.log("stopx",hit.x);
+                  console.log("stopx",hit.x);
                   this.dx = 0; // full stop, no half measures
                   newX = oldX;
               }
@@ -7166,7 +7271,7 @@ assets:
               hit.y = occupied(this, newX, newY);
 
               if (hit.y) {
-                  // console.log("hit y", this.x, newY, "go back to ",this.x, oldY,"dx dy", this.dx, this.dy);
+                  console.log("hit y", this.x, newY, "go back to ",this.x, oldY,"dx dy", this.dx, this.dy);
                   newY = oldY;
                   this.dy = 0;
               }
@@ -7322,6 +7427,8 @@ assets:
             code: |-
               window.chimp = this; // debug
 
+              this.zIndex = 1000;
+
               this.animationSpeed = 0.15;
 
               this.dx = 0; // Horizontal speed
@@ -7372,7 +7479,7 @@ assets:
             lib: place
         extends:
           cgroup: ''
-        lastmod: 1709247950320
+        lastmod: 1719680030296
         uid: CfLHnnjb3G8L59
         behaviors: []
         baseClass: AnimatedSprite
@@ -7382,6 +7489,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: coin
         depth: 0
@@ -7413,6 +7521,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: code-blank
         depth: 0
@@ -7437,6 +7546,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: coin_score
         depth: 0
@@ -7467,6 +7577,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: door
         depth: 0
@@ -7535,6 +7646,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: element-button
         depth: 0
@@ -7551,8 +7663,9 @@ assets:
               UI.puzzle.useCanister(this.canister);
             arguments: {}
             lib: core
-        extends: {}
-        lastmod: 1702240313945
+        extends:
+          cgroup: ''
+        lastmod: 1719496963454
         uid: n7f9k3GBb6Ft9c
         behaviors: []
         baseClass: AnimatedSprite
@@ -7562,6 +7675,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: Empty
         depth: 0
@@ -7582,6 +7696,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: empty-button
         depth: 0
@@ -7613,8 +7728,9 @@ assets:
             code: hideTooltip(this);
             arguments: {}
             lib: core
-        extends: {}
-        lastmod: 1704041706187
+        extends:
+          cgroup: ''
+        lastmod: 1719683183055
         uid: PLPH5btfWJw2DL
         behaviors: []
         baseClass: AnimatedSprite
@@ -7624,6 +7740,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: empty-tile
         depth: 0
@@ -7690,6 +7807,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: checkbox
         depth: 0
@@ -7745,6 +7863,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: exit-button
         depth: 0
@@ -7791,8 +7910,17 @@ assets:
               }
             arguments: {}
             lib: core
-        extends: {}
-        lastmod: 1704402893717
+          - eventKey: OnPointerEnter
+            code: 'showTooltip(this, "Exit");'
+            arguments: {}
+            lib: core
+          - eventKey: OnPointerLeave
+            code: hideTooltip(this);
+            arguments: {}
+            lib: core
+        extends:
+          cgroup: ''
+        lastmod: 1719683183085
         uid: zTf3hWP3nKGMhm
         behaviors: []
         baseClass: AnimatedSprite
@@ -7802,6 +7930,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: explosion
         depth: 0
@@ -7826,6 +7955,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: info-bar
         depth: 0
@@ -7855,6 +7985,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: light
         depth: 0
@@ -7875,6 +8006,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: snake-spit
         depth: 0
@@ -7955,6 +8087,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: magnifier
         depth: 0
@@ -8059,6 +8192,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: pipe-bit
         depth: 0
@@ -8083,6 +8217,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: Platform
         depth: 0
@@ -8094,7 +8229,7 @@ assets:
         events: []
         extends:
           cgroup: Solid
-        lastmod: 1704228896930
+        lastmod: 1719681886880
         uid: 1cRbbTTRzCHgjn
         behaviors: []
         baseClass: AnimatedSprite
@@ -8104,6 +8239,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: PlumbingContainer
         depth: 0
@@ -8124,6 +8260,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: modal
         depth: 0
@@ -8144,6 +8281,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: PipeColorMarker
         depth: 0
@@ -8164,6 +8302,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: red-neon
         depth: 0
@@ -8199,6 +8338,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: sailor
         depth: 0
@@ -8223,6 +8363,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: manhole
         depth: 0
@@ -8322,6 +8463,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: wall-v
         depth: 0
@@ -8343,6 +8485,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: skip-button
         depth: 0
@@ -8377,6 +8520,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: start-button
         depth: 0
@@ -8395,6 +8539,9 @@ assets:
               switch(text) {
                   case "Options":
                       openOptions();
+                      return;
+                  case "Exit":
+                      console.error("EXIT HOW?!");
                       return;
                   case "Start New Game":
                   case "Start Game":
@@ -8438,8 +8585,9 @@ assets:
               style:"Style_BodyText"});
             arguments: {}
             lib: core
-        extends: {}
-        lastmod: 1704139609651
+        extends:
+          cgroup: ''
+        lastmod: 1719497154143
         uid: QQcGJDzRwCJz5d
         behaviors: []
         baseClass: AnimatedSprite
@@ -8449,6 +8597,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: spit-bullet
         depth: 0
@@ -8504,6 +8653,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: speech-bubble
         depth: 0
@@ -8528,6 +8678,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: table-ship
         depth: 0
@@ -8552,6 +8703,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: snake-3
         depth: 0
@@ -8658,6 +8810,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: tank-1
         depth: 0
@@ -8682,6 +8835,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: tank-2
         depth: 0
@@ -8767,6 +8921,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: telephone
         depth: 0
@@ -8807,6 +8962,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: TextBlock
         depth: 0
@@ -8835,6 +8991,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: wall
         depth: 0
@@ -8846,7 +9003,7 @@ assets:
         events: []
         extends:
           cgroup: Solid
-        lastmod: 1704315781951
+        lastmod: 1719681878833
         uid: cqqdNgkBk88ckw
         behaviors: []
         baseClass: AnimatedSprite
@@ -8856,6 +9013,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: button
         depth: 0
@@ -8875,8 +9033,9 @@ assets:
               verticalCenter:true});
             arguments: {}
             lib: core
-        extends: {}
-        lastmod: 1705522882579
+        extends:
+          cgroup: ''
+        lastmod: 1719497763285
         uid: 1pBF4L6tGkhfB5
         behaviors: []
         baseClass: AnimatedSprite
@@ -8886,6 +9045,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
       - type: template
         name: canister
         depth: 0
@@ -8945,6 +9105,7 @@ assets:
           right: 16
           bottom: 16
         style: -1
+        extendTypes: ''
   - type: folder
     uid: T457bcLng1mNfk
     colorClass: act
@@ -8962,6 +9123,7 @@ assets:
           italic: false
         lastmod: 1701886743860
         type: style
+        typeface: -1
       - name: Style_BodyText
         uid: jtB8zh3C47n5qR
         origname: s47n5qR
@@ -8974,6 +9136,7 @@ assets:
           wrapPosition: 300
         lastmod: 1702658770059
         type: style
+        typeface: -1
       - name: Style_CodeOn
         uid: cQkP5qHz28hCgH
         origname: s28hCgH
@@ -8987,6 +9150,7 @@ assets:
           type: '0'
           color: '#00CC00'
         type: style
+        typeface: -1
       - name: Style_CodeOff
         uid: N1TGgrDgwN4515
         origname: swN4515
@@ -8997,6 +9161,7 @@ assets:
           italic: false
         lastmod: 1702132302211
         type: style
+        typeface: -1
       - name: Style_Score
         uid: 8BbjGqjKRBjMww
         origname: sRBjMww
@@ -9013,6 +9178,7 @@ assets:
           weight: 2
         lastmod: 1701614607735
         type: style
+        typeface: -1
       - name: Style_InfoBar
         uid: mM6p53Mk6FF9GC
         origname: s6FF9GC
@@ -9026,6 +9192,7 @@ assets:
           type: '0'
           color: '#FFFFFF'
         type: style
+        typeface: -1
       - name: Style_Tooltip
         uid: cDrzkmjgBCpTLC
         origname: sBCpTLC
@@ -9049,6 +9216,7 @@ assets:
           blur: 5
         lastmod: 1701721763618
         type: style
+        typeface: -1
   - type: folder
     uid: BpwRrn75pDwBPC
     colorClass: act
@@ -11481,6 +11649,7 @@ assets:
             lib: core
         uid: 4r5LJRwRcjzkf6
         behaviors: []
+        extendTypes: ''
       - lastmod: 1701627877470
         type: texture
         name: canister-label
@@ -12252,3 +12421,4 @@ assets:
             showShapeVisualizer: true
         lastmod: 1709116117176
         type: tandem
+globalVars: []
